@@ -18,7 +18,7 @@ export class OpenAIClient {
 	 * The answer mode of the AI, this is the default answer mode of the AI
 	 * Use this to prevent the AI to generate long answers or to be confused
 	 */
-	answerMode = 'The answers are within 4 sentences';
+	// answerMode = 'The answers are within 4 sentences';
 	/**
 	 * Split the sentence when the AI generate the response,
 	 * Prevent not to generate long answers, reply with multiple chat messages
@@ -28,6 +28,16 @@ export class OpenAIClient {
 	constructor(apiKey: string) {
 		this.client = new OpenAI({ apiKey, timeout: this.timeout });
 		this.characterRole = 'Riko';
+	}
+
+	/**
+ * The answer mode of the AI, this is the default answer mode of the AI
+ * Use this to prevent the AI to generate long answers or to be confused
+ */
+	private dynamicLimitAnswerSentences(start: number, end: number) {
+		const answerMode = `The answers are within XXX sentences`;
+		const randomLimit = Math.floor(Math.random() * (end - start + 1)) + start;
+		return answerMode.replace('XXX', randomLimit.toString());
 	}
 
 	/**
@@ -43,7 +53,8 @@ export class OpenAIClient {
 			messages: [
 				...SystemRole[character],
 				...CharacterRole[this.characterRole],
-				...this.generateSystemMessages([this.answerMode]),
+				...this.generateSystemMessages([this.dynamicLimitAnswerSentences(2, 5)]),
+				// ...this.generateSystemMessages([this.answerMode]),
 				...this.generatePreviousMessages(previousMessages),
 				...this.generateTextMessages(messages),
 			],
