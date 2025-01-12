@@ -8,7 +8,7 @@
     "deploy": "run-s deploy:wrangler deploy:post",
     "dev:wrangler": "wrangler dev",
     "start": "wrangler dev",
-    "dev": "bun run src/dev.ts",
+    "dev": "bun run --watch src/dev.ts",
     "test": "vitest",
     "cf-typegen": "wrangler types"
   },

@@ -10,7 +10,7 @@
  */
 
 import { webhookCallback } from "grammy";
-import { BotApp } from "./bot";
+import { BotApp } from "./bot/bot";
 
 export interface Env {
 	BOT_INFO: string;
