@@ -60,6 +60,7 @@ export class OpenAIClient {
 		const chatCompletion = await this.client.chat.completions.create({
 			messages: [
 				...AgentCharacter[character],
+				...this.generateTextMessages(messages),
 				...this.generatePreviousMessages(previousMessages),
 				this.generateImageMessage(imageUrl),
 			],
