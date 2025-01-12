@@ -3,6 +3,7 @@ import type { UserFromGetMe } from "grammy/types";
 
 import { authorize } from "../middlewares/authorize";
 import { OpenAIClient } from "./ai/openai";
+import { t } from "./languages";
 
 type BotAppContext = Context;
 
@@ -76,20 +77,13 @@ export class BotApp {
 		if (this.protectedBot === true) {
 			this.bot.use(authorize(this.options.allowUserIds ?? []));
 		}
-		// Use the hydrateFiles middleware to enable file handling
-		// this.bot.api.config.use(hydrateFiles(this.options.botToken));
-		this.bot.command("start", async (ctx: Context) => {
-			await ctx.reply(`Hello, I am ${this.bot.botInfo.first_name} (From Cloudflare Workers) XX`);
-		});
 		this.bot.command("whoiam", async (ctx: Context) => {
-			await ctx.reply(`You are ${ctx.from?.first_name} (id: ${ctx.message?.from?.id})`);
+			await ctx.reply(`${t.yourAre} ${ctx.from?.first_name} (id: ${ctx.message?.from?.id})`);
 		});
 		this.bot.api.setMyCommands([
-			{ command: 'start', description: 'Start the bot' },
 			{ command: 'whoiam', description: 'Who am I' },
 		]);
 		this.bot.on('message', async (ctx: Context) => this.allMessagesHandler(ctx, this.options.aiClient, this.telegram));
-		// this.bot.on('message', async (ctx: BotAppContext) => this.messageAndPhotoHandler(ctx, this.telegram));
 		this.bot.catch((err) => {
 			console.error('Bot error', err);
 		});
@@ -105,10 +99,11 @@ export class BotApp {
 	}
 
 	private async handlePhoto(ctx: BotAppContext, aiClient: OpenAIClient, photo: { file_path: string, caption?: string }) {
+		await ctx.reply(`${t.readingImage}...`);
 		const incomingMessages = photo.caption ? [photo.caption] : [];
 		const message = await aiClient.chatWithImage('friend', incomingMessages, photo.file_path);
 		if (!message) {
-			await ctx.reply('Sorry, I cannot understand you');
+			await ctx.reply(t.sorryICannotUnderstand);
 			return;
 		}
 		await ctx.reply(message);
@@ -122,7 +117,7 @@ export class BotApp {
 			photo: ctx.message?.photo ? (await ctx.getFile()).file_path : undefined,
 		}
 		if (messages.text === undefined && messages.caption === undefined && messages.photo === undefined) {
-			await ctx.reply(`I don't understand that messages type`);
+			await ctx.reply(t.sorryICannotUnderstandMessageType);
 			return;
 		}
 
@@ -137,7 +132,7 @@ export class BotApp {
 
 	private async handleMessageText(ctx: Context, aiClient: OpenAIClient, incomingMessage: string | undefined) {
 		if (!aiClient) {
-			await ctx.reply('Sorry, I cannot understand you (aiClient is not available)');
+			await ctx.reply(`${t.sorryICannotUnderstand} (aiClient is not available)`);
 			return;
 		}
 		if (!incomingMessage) {
@@ -150,7 +145,7 @@ export class BotApp {
 
 		const message = await aiClient.chat('friend', [incomingMessage]);
 		if (!message) {
-			await ctx.reply('Sorry, I cannot understand you');
+			await ctx.reply(t.sorryICannotUnderstand);
 			return;
 		}
 		await ctx.reply(message);
