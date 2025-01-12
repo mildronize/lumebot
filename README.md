@@ -25,3 +25,8 @@ bun run deploy
 ```
 
 https://grammy.dev/hosting/cloudflare-workers-nodejs
+
+
+## Doc
+
+- Testing: https://github.com/PavelPolyakov/grammy-with-tests

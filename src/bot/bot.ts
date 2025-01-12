@@ -1,7 +1,29 @@
 import { Bot, Context } from "grammy";
 import type { UserFromGetMe } from "grammy/types";
+
 import { authorize } from "../middlewares/authorize";
 import { OpenAIClient } from "./ai/openai";
+
+type BotAppContext = Context;
+
+export interface TelegramMessageType {
+	/**
+	 * Incoming text message
+	 */
+	text?: string;
+	/**
+	 * Incoming caption message (with photo)
+	 */
+	caption?: string;
+	/**
+	 * Incoming photo file_path
+	 */
+	photo?: string;
+	/**
+	 * Incoming audio file_path
+	 */
+	// audio?: string;
+}
 
 export interface BotAppOptions {
 	botToken: string;
@@ -11,13 +33,41 @@ export interface BotAppOptions {
 	protectedBot?: boolean;
 }
 
+export class TelegramApiClient {
+	baseUrl = 'https://api.telegram.org';
+	constructor(public botToken: string) { }
+
+	async getMe() {
+		const response = await fetch(`${this.baseUrl}/bot${this.botToken}/getMe`);
+		if (!response.ok) {
+			throw new Error(`Failed to get the bot info: ${response.statusText}`);
+		}
+		const data = await response.json();
+		return data;
+	}
+
+	/**
+	 * Get Download URL for the file
+	 *
+	 * @ref https://core.telegram.org/bots/api#getfile
+	 * @param filePath
+	 * @returns
+	 */
+
+	getFileUrl(filePath: string): string {
+		return `${this.baseUrl}/file/bot${this.botToken}/${filePath}`;
+	}
+}
+
 export class BotApp {
-	private bot: Bot;
+	private bot: Bot<BotAppContext>;
+	private telegram: TelegramApiClient;
 	private protectedBot: boolean;
 	constructor(public options: BotAppOptions) {
-		this.bot = new Bot(options.botToken, {
+		this.bot = new Bot<BotAppContext>(options.botToken, {
 			botInfo: options.botInfo,
 		});
+		this.telegram = new TelegramApiClient(options.botToken);
 		this.protectedBot = options.protectedBot ?? true;
 	}
 
@@ -26,6 +76,8 @@ export class BotApp {
 		if (this.protectedBot === true) {
 			this.bot.use(authorize(this.options.allowUserIds ?? []));
 		}
+		// Use the hydrateFiles middleware to enable file handling
+		// this.bot.api.config.use(hydrateFiles(this.options.botToken));
 		this.bot.command("start", async (ctx: Context) => {
 			await ctx.reply(`Hello, I am ${this.bot.botInfo.first_name} (From Cloudflare Workers) XX`);
 		});
@@ -36,7 +88,8 @@ export class BotApp {
 			{ command: 'start', description: 'Start the bot' },
 			{ command: 'whoiam', description: 'Who am I' },
 		]);
-		this.bot.on('message', async (ctx: Context) => this.messageHandler(ctx, this.options.aiClient));
+		this.bot.on('message', async (ctx: Context) => this.allMessagesHandler(ctx, this.options.aiClient, this.telegram));
+		// this.bot.on('message', async (ctx: BotAppContext) => this.messageAndPhotoHandler(ctx, this.telegram));
 		this.bot.catch((err) => {
 			console.error('Bot error', err);
 		});
@@ -51,12 +104,43 @@ export class BotApp {
 		});
 	}
 
-	private async messageHandler(ctx: Context, aiClient: OpenAIClient) {
-		if(!aiClient) {
+	private async handlePhoto(ctx: BotAppContext, aiClient: OpenAIClient, photo: { file_path: string, caption?: string }) {
+		const incomingMessages = photo.caption ? [photo.caption] : [];
+		const message = await aiClient.chatWithImage('friend', incomingMessages, photo.file_path);
+		if (!message) {
+			await ctx.reply('Sorry, I cannot understand you');
+			return;
+		}
+		await ctx.reply(message);
+	}
+
+	private async allMessagesHandler(ctx: Context, aiClient: OpenAIClient, telegram: TelegramApiClient) {
+		// classifying the message type
+		const messages: TelegramMessageType = {
+			text: ctx.message?.text,
+			caption: ctx.message?.caption,
+			photo: ctx.message?.photo ? (await ctx.getFile()).file_path : undefined,
+		}
+		if (messages.text === undefined && messages.caption === undefined && messages.photo === undefined) {
+			await ctx.reply(`I don't understand that messages type`);
+			return;
+		}
+
+		const incomingMessage = messages.text || messages.caption;
+		if (messages.photo) {
+			const photoUrl = telegram.getFileUrl(messages.photo);
+			await this.handlePhoto(ctx, aiClient, { file_path: photoUrl, caption: incomingMessage });
+			return;
+		}
+		await this.handleMessageText(ctx, aiClient, incomingMessage);
+	}
+
+	private async handleMessageText(ctx: Context, aiClient: OpenAIClient, incomingMessage: string | undefined) {
+		if (!aiClient) {
 			await ctx.reply('Sorry, I cannot understand you (aiClient is not available)');
 			return;
 		}
-		if(!ctx.message?.text) {
+		if (!incomingMessage) {
 			await ctx.reply('Please send a text message');
 			return;
 		}
@@ -64,8 +148,8 @@ export class BotApp {
 		// Example of chaining the conversation:
 		// const message = await aiClient.chat('friend', [ctx.message?.text], ['Previous question: What is your favorite color','Previous response: blue']);
 
-		const message = await aiClient.chat('friend', [ctx.message?.text]);
-		if(!message) {
+		const message = await aiClient.chat('friend', [incomingMessage]);
+		if (!message) {
 			await ctx.reply('Sorry, I cannot understand you');
 			return;
 		}
