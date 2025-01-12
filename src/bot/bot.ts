@@ -9,7 +9,6 @@ export class BotApp {
 	private bot: Bot;
 	constructor(botToken: string, public options: BotAppOptions) {
 		this.bot = new Bot(botToken, options);
-		this.init();
 	}
 
 	init() {
@@ -17,6 +16,10 @@ export class BotApp {
 		this.bot.command("start", async (ctx: Context) => {
 			await ctx.reply(`Hello, I am ${this.bot.botInfo.first_name} (From Cloudflare Workers)`);
 		});
+		this.bot.api.setMyCommands([
+			{ command: 'start', description: 'Start the bot' },
+		]);
+		return this;
 	}
 
 	async start() {

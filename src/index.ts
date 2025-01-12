@@ -23,7 +23,7 @@ export default {
 		env: Env,
 		ctx: ExecutionContext,
 	): Promise<Response> {
-		const botApp = new BotApp(env.BOT_TOKEN, { botInfo: JSON.parse(env.BOT_INFO) });
+		const botApp = new BotApp(env.BOT_TOKEN, { botInfo: JSON.parse(env.BOT_INFO) }).init();
 		return webhookCallback(botApp.instance, "cloudflare-mod")(request);
 	},
 } satisfies ExportedHandler<Env>;
