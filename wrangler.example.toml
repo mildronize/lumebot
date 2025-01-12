@@ -34,6 +34,8 @@ BOT_INFO = """{
   "can_connect_to_business": false,
   "has_main_web_app": false
 }"""
+# Allow User IDs to use the bot
+# ALLOWED_USER_IDS=
 
 # Bind the Workers AI model catalog. Run machine learning models, powered by serverless GPUs, on Cloudflare’s global network
 # Docs: https://developers.cloudflare.com/workers/wrangler/configuration/#workers-ai
