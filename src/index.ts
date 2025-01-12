@@ -11,19 +11,16 @@
 
 import { webhookCallback } from "grammy";
 import { BotApp } from "./bot/bot";
-
-export interface Env {
-	BOT_INFO: string;
-	BOT_TOKEN: string;
-}
+import { getEnv } from "./env";
 
 export default {
 	async fetch(
 		request: Request,
-		env: Env,
+		rawEnv: unknown,
 		ctx: ExecutionContext,
 	): Promise<Response> {
-		const botApp = new BotApp(env.BOT_TOKEN, { botInfo: JSON.parse(env.BOT_INFO) }).init();
+		const env = getEnv(rawEnv);
+		const botApp = new BotApp(env.BOT_TOKEN, { botInfo: JSON.parse(env.BOT_INFO), allowUserIds: env.ALLOWED_USER_IDS }).init();
 		return webhookCallback(botApp.instance, "cloudflare-mod")(request);
 	},
 } satisfies ExportedHandler<Env>;
