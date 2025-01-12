@@ -1,5 +1,5 @@
 
-import { BotApp } from "../bot/bot";
+import { BotApp } from "../src/bot/bot";
 import { getEnv } from "./env";
 /**
  * Start the development server

@@ -10,7 +10,7 @@ bun dev
 ## Deploy
 ```
 bun install
-bun deploy
+bun run deploy
 ```
 
 https://grammy.dev/hosting/cloudflare-workers-nodejs

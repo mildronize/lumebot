@@ -3,12 +3,12 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "deploy:post": "bun run src/post-deploy.ts",
+    "deploy:post": "bun run scripts/post-deploy.ts",
     "deploy:wrangler": "wrangler deploy",
     "deploy": "run-s deploy:wrangler deploy:post",
     "dev:wrangler": "wrangler dev",
     "start": "wrangler dev",
-    "dev": "bun run --watch src/dev.ts",
+    "dev": "bun run --watch scripts/dev.ts",
     "test": "vitest",
     "cf-typegen": "wrangler types"
   },
