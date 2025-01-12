@@ -15,6 +15,7 @@ export function authorize(
 			await ctx.reply(replyMessage);
 			return;
 		}
+		// TODO: Check Chat Type later, e.g. ctx.chat?.type === 'private'
 		if (allowedUserIds.includes(ctx.message?.from?.id)) {
 			console.log(`User ${ctx.message?.from?.id} is authorized`);
 			await next();

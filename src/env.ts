@@ -38,6 +38,10 @@ export const envSchema = z.object({
 	 * When not set, it will automatically generate a secret
 	 */
 	WEBHOOK_SECRET: z.string().optional(),
+	/**
+	 * OpenAI API Key
+	 */
+	OPENAI_API_KEY: z.string(),
 });
 
 export function getEnv(env: unknown) {

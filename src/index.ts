@@ -12,6 +12,7 @@
 import { webhookCallback } from "grammy";
 import { BotApp } from "./bot/bot";
 import { getEnv } from "./env";
+import { OpenAIClient } from "./bot/ai/openai";
 
 export default {
 	async fetch(
@@ -20,7 +21,9 @@ export default {
 		ctx: ExecutionContext,
 	): Promise<Response> {
 		const env = getEnv(rawEnv);
-		const botApp = new BotApp(env.BOT_TOKEN, { botInfo: JSON.parse(env.BOT_INFO), allowUserIds: env.ALLOWED_USER_IDS }).init();
+		const aiClient = new OpenAIClient(env.OPENAI_API_KEY);
+		const botApp = new BotApp({ botToken: env.BOT_TOKEN, botInfo: JSON.parse(env.BOT_INFO), allowUserIds: env.ALLOWED_USER_IDS, aiClient });
+		botApp.init();
 		try {
 			const url = new URL(request.url);
 			if (url.searchParams.get("secret") !== env.WEBHOOK_SECRET) {

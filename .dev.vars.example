@@ -4,3 +4,5 @@ BOT_INFO=
 TELEGRAM_WEBHOOK_URL=https://<subdomain>.workers.dev/
 ALLOWED_USER_IDS=
 WEBHOOK_SECRET=
+
+OPENAI_API_KEY=
