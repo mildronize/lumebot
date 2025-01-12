@@ -1,6 +1,6 @@
 import OpenAI, { toFile } from 'openai';
 import type { ChatCompletionMessageParam } from 'openai/resources/index.mjs';
-import { AgentCharacter } from './characters';
+import { SystemRole } from './characters';
 
 export class OpenAIClient {
 	client: OpenAI;
@@ -26,10 +26,10 @@ export class OpenAIClient {
 	 * @param {string[]} [previousMessages=[]] - The previous messages to chat with the AI
 	 * @returns
 	 */
-	async chat(character: keyof typeof AgentCharacter, messages: string[], previousMessages: string[] = []) {
+	async chat(character: keyof typeof SystemRole, messages: string[], previousMessages: string[] = []) {
 		const chatCompletion = await this.client.chat.completions.create({
 			messages: [
-				...AgentCharacter[character],
+				...SystemRole[character],
 				...this.generatePreviousMessages(previousMessages),
 				...this.generateTextMessages(messages),
 			],
@@ -56,10 +56,10 @@ export class OpenAIClient {
 		} as ChatCompletionMessageParam;
 	}
 
-	async chatWithImage(character: keyof typeof AgentCharacter, messages: string[], imageUrl: string, previousMessages: string[] = []) {
+	async chatWithImage(character: keyof typeof SystemRole, messages: string[], imageUrl: string, previousMessages: string[] = []) {
 		const chatCompletion = await this.client.chat.completions.create({
 			messages: [
-				...AgentCharacter[character],
+				...SystemRole[character],
 				...this.generateTextMessages(messages),
 				...this.generatePreviousMessages(previousMessages),
 				this.generateImageMessage(imageUrl),

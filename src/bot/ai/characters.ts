@@ -1,7 +1,7 @@
 import type { ChatCompletionMessageParam } from 'openai/resources/index.mjs';
 
-export type AgentCharacterKey = 'friend';
+export type SystemRoleKey = 'friend';
 
-export const AgentCharacter: Record<AgentCharacterKey, ChatCompletionMessageParam[]> = {
+export const SystemRole: Record<SystemRoleKey, ChatCompletionMessageParam[]> = {
 	friend: [{ role: 'system', content: 'You are friendly nice friend and use Thai Langauge' }],
 };
