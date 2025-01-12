@@ -1,8 +1,9 @@
-import OpenAI, { toFile } from 'openai';
+import OpenAI from 'openai';
 import type { ChatCompletionMessageParam } from 'openai/resources/index.mjs';
-import { SystemRole } from './characters';
+import { SystemRole, CharacterRole, sentenceEnd } from './characters';
 
 export class OpenAIClient {
+	characterRole: keyof typeof CharacterRole;
 	client: OpenAI;
 	model: string = 'gpt-4o-mini';
 	timeout: number = 20 * 1000; // 20 seconds, default is 10 minutes (By OpenAI)
@@ -13,9 +14,20 @@ export class OpenAIClient {
 	 * @default 4
 	 */
 	previousMessageLimit: number = 4;
+	/**
+	 * The answer mode of the AI, this is the default answer mode of the AI
+	 * Use this to prevent the AI to generate long answers or to be confused
+	 */
+	answerMode = 'The answers are within 4 sentences';
+	/**
+	 * Split the sentence when the AI generate the response,
+	 * Prevent not to generate long answers, reply with multiple chat messages
+	 */
+	splitSentence: boolean = true;
 
 	constructor(apiKey: string) {
 		this.client = new OpenAI({ apiKey, timeout: this.timeout });
+		this.characterRole = 'Riko';
 	}
 
 	/**
@@ -26,16 +38,26 @@ export class OpenAIClient {
 	 * @param {string[]} [previousMessages=[]] - The previous messages to chat with the AI
 	 * @returns
 	 */
-	async chat(character: keyof typeof SystemRole, messages: string[], previousMessages: string[] = []) {
+	async chat(character: keyof typeof SystemRole, messages: string[], previousMessages: string[] = []): Promise<string[]> {
 		const chatCompletion = await this.client.chat.completions.create({
 			messages: [
 				...SystemRole[character],
+				...CharacterRole[this.characterRole],
+				...this.generateSystemMessages([this.answerMode]),
 				...this.generatePreviousMessages(previousMessages),
 				...this.generateTextMessages(messages),
 			],
 			model: this.model,
 		});
-		return chatCompletion.choices[0].message.content;
+		const response = chatCompletion.choices[0].message.content ?? '';
+		if (this.splitSentence) {
+			return response.split(sentenceEnd);
+		}
+		return [response];
+	}
+
+	private generateSystemMessages(messages: string[]) {
+		return messages.map((message) => ({ role: 'system', content: message } satisfies ChatCompletionMessageParam));
 	}
 
 	private generatePreviousMessages(messages: string[]) {

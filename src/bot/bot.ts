@@ -143,12 +143,18 @@ export class BotApp {
 		// Example of chaining the conversation:
 		// const message = await aiClient.chat('friend', [ctx.message?.text], ['Previous question: What is your favorite color','Previous response: blue']);
 
-		const message = await aiClient.chat('friend', [incomingMessage]);
-		if (!message) {
-			await ctx.reply(t.sorryICannotUnderstand);
-			return;
+		const messages = await aiClient.chat('friend', [incomingMessage]);
+		let countNoResponse = 0;
+		for(const message of messages) {
+			if (!message) {
+				countNoResponse++;
+				continue;
+			}
+			await ctx.reply(message);
 		}
-		await ctx.reply(message);
+		if (countNoResponse === messages.length) {
+			await ctx.reply(t.sorryICannotUnderstand);
+		}
 	}
 
 	get instance() {
