@@ -1,7 +1,13 @@
 
+import dotenv from 'dotenv';
+
 import { BotApp } from "../src/bot/bot";
 import { getEnv } from "../src/env";
 import { generateUpdateMiddleware } from "telegraf-middleware-console-time";
+import { config } from "./_config";
+
+// Use the same file of Wrangler Runtime
+dotenv.config({ path: config.localEnvPath });
 /**
  * Start the development server
  */

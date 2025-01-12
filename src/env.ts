@@ -34,8 +34,10 @@ export const envSchema = z.object({
 	 * Webhook Secret
 	 *
 	 * Use to verify the request is coming from Telegram
+	 *
+	 * When not set, it will automatically generate a secret
 	 */
-	WEBHOOK_SECRET: z.string(),
+	WEBHOOK_SECRET: z.string().optional(),
 });
 
 export function getEnv(env: unknown) {
