@@ -9,8 +9,11 @@ export async function postDeploy() {
 	if(!env.TELEGRAM_WEBHOOK_URL) {
 		throw new Error('TELEGRAM_WEBHOOK_URL is not set');
 	}
-	console.log(`Setting webhook to ${env.TELEGRAM_WEBHOOK_URL.replace(env.BOT_TOKEN, '***')}`);
-	await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/setWebhook?url=${env.TELEGRAM_WEBHOOK_URL}`);
+	const telegramWebhookUrl = new URL(env.TELEGRAM_WEBHOOK_URL);
+	telegramWebhookUrl.searchParams.set('secret', env.WEBHOOK_SECRET);
+	const targetUrl = `https://api.telegram.org/bot${env.BOT_TOKEN}/setWebhook?url=${	telegramWebhookUrl.toString()}`;
+	console.log(`Setting webhook to ${targetUrl.replace(env.BOT_TOKEN, '**BOT_TOKEN**').replace(env.WEBHOOK_SECRET, '**WEBHOOK_SECRET**')}`);
+	await fetch(targetUrl);
 }
 
 postDeploy();
