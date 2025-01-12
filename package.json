@@ -3,20 +3,28 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "deploy": "wrangler deploy",
-    "dev": "wrangler dev",
+    "deploy:post": "bun run src/post-deploy.ts",
+    "deploy:wrangler": "wrangler deploy",
+    "deploy": "run-s deploy:wrangler deploy:post",
+    "dev:wrangler": "wrangler dev",
     "start": "wrangler dev",
+    "dev": "bun run src/dev.ts",
     "test": "vitest",
     "cf-typegen": "wrangler types"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.5.2",
     "@cloudflare/workers-types": "^4.20250109.0",
+    "@types/node": "^22.10.5",
     "typescript": "^5.5.2",
     "vitest": "2.1.8",
     "wrangler": "^3.60.3"
   },
   "dependencies": {
-    "grammy": "^1.34.0"
+    "dotenv": "^16.4.7",
+    "grammy": "^1.34.0",
+    "npm-run-all": "^4.1.5",
+    "zod": "^3.24.1",
+    "zod-validation-error": "^3.4.0"
   }
 }
