@@ -9,6 +9,11 @@ type BotAppContext = Context;
 
 export interface TelegramMessageType {
 	/**
+	 * Incoming reply_to_message, when the user reply existing message
+	 * Use this for previous message context
+	 */
+	replyToMessage?: string;
+	/**
 	 * Incoming text message
 	 */
 	text?: string;
@@ -59,6 +64,8 @@ export class TelegramApiClient {
 		return `${this.baseUrl}/file/bot${this.botToken}/${filePath}`;
 	}
 }
+
+export const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export class BotApp {
 	private bot: Bot<BotAppContext>;
@@ -112,6 +119,7 @@ export class BotApp {
 	private async allMessagesHandler(ctx: Context, aiClient: OpenAIClient, telegram: TelegramApiClient) {
 		// classifying the message type
 		const messages: TelegramMessageType = {
+			replyToMessage: ctx.message?.reply_to_message?.text,
 			text: ctx.message?.text,
 			caption: ctx.message?.caption,
 			photo: ctx.message?.photo ? (await ctx.getFile()).file_path : undefined,
@@ -127,10 +135,18 @@ export class BotApp {
 			await this.handlePhoto(ctx, aiClient, { file_path: photoUrl, caption: incomingMessage });
 			return;
 		}
-		await this.handleMessageText(ctx, aiClient, incomingMessage);
+		await this.handleMessageText(ctx, aiClient, {
+			incomingMessage: incomingMessage,
+			replyToMessage: messages.replyToMessage,
+		});
 	}
 
-	private async handleMessageText(ctx: Context, aiClient: OpenAIClient, incomingMessage: string | undefined) {
+	private async handleMessageText(
+		ctx: Context,
+		aiClient: OpenAIClient,
+		messageContext: { incomingMessage: string | undefined; replyToMessage: string | undefined; }
+	) {
+		const { incomingMessage, replyToMessage } = messageContext;
 		if (!aiClient) {
 			await ctx.reply(`${t.sorryICannotUnderstand} (aiClient is not available)`);
 			return;
@@ -139,17 +155,19 @@ export class BotApp {
 			await ctx.reply('Please send a text message');
 			return;
 		}
+		const previousMessage = replyToMessage ? [`Previous message: ${replyToMessage}`] : [];
 		// For chaining the conversation, we need to keep track of the previous messages
 		// Example of chaining the conversation:
 		// const message = await aiClient.chat('friend', [ctx.message?.text], ['Previous question: What is your favorite color','Previous response: blue']);
 
-		const messages = await aiClient.chat('friend', [incomingMessage]);
+		const messages = await aiClient.chat('friend', [incomingMessage], previousMessage);
 		let countNoResponse = 0;
-		for(const message of messages) {
+		for (const message of messages) {
 			if (!message) {
 				countNoResponse++;
 				continue;
 			}
+			await delay(100);
 			await ctx.reply(message);
 		}
 		if (countNoResponse === messages.length) {

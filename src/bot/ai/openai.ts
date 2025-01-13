@@ -53,7 +53,7 @@ export class OpenAIClient {
 			messages: [
 				...SystemRole[character],
 				...CharacterRole[this.characterRole],
-				...this.generateSystemMessages([this.dynamicLimitAnswerSentences(2, 5)]),
+				...this.generateSystemMessages([this.dynamicLimitAnswerSentences(3, 5)]),
 				// ...this.generateSystemMessages([this.answerMode]),
 				...this.generatePreviousMessages(previousMessages),
 				...this.generateTextMessages(messages),
@@ -62,7 +62,7 @@ export class OpenAIClient {
 		});
 		const response = chatCompletion.choices[0].message.content ?? '';
 		if (this.splitSentence) {
-			return response.split(sentenceEnd);
+			return response.split(sentenceEnd).map((sentence) => sentence.trim());
 		}
 		return [response];
 	}
