@@ -1,6 +1,6 @@
 {
   "name": "grammybot",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "deploy:pre": "bun run scripts/pre-deploy.ts",
@@ -10,6 +10,7 @@
     "start": "wrangler dev",
     "dev": "bun run --watch scripts/dev.ts",
     "test": "vitest",
+    "release": "release-it",
     "cf-typegen": "wrangler types"
   },
   "devDependencies": {
@@ -20,6 +21,7 @@
     "@types/node": "^22.10.5",
     "bun": "^1.1.43",
     "type-fest": "^4.32.0",
+    "release-it": "^18.1.1",
     "typescript": "^5.5.2",
     "vitest": "2.1.8",
     "wrangler": "^3.60.3"
