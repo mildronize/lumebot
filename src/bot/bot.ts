@@ -7,7 +7,7 @@ import { t } from "./languages";
 import { AzureTable } from "../libs/azure-table";
 import { IMessageEntity, MessageEntity } from "../entities/messages";
 import { ODataExpression } from "ts-odata-client";
-import { Chat } from "openai/resources/index.mjs";
+import telegramifyMarkdown from 'telegramify-markdown';
 
 type BotAppContext = Context;
 
@@ -260,28 +260,13 @@ export class BotApp {
 				continue;
 			}
 			await delay(100);
-			await ctx.reply(message);
+			await ctx.reply(telegramifyMarkdown(message, 'escape'), { parse_mode: 'MarkdownV2' });
 		}
 		if (countNoResponse === messages.length) {
 			await ctx.reply(t.sorryICannotUnderstand);
 			return;
 		}
 	}
-
-	// private async saveTextMessages(ctx: BotAppContext, azureTableMessageClient: AzureTable<IMessageEntity>, messages: string[], senderId: number) {
-	// 	const messageRowsPromise: Promise<IMessageEntity>[] = [];
-	// 	for (let order = 0; order < messages.length; order++) {
-	// 		const messageEntity = new MessageEntity({
-	// 			payload: messages[order],
-	// 			type: 'text',
-	// 			senderId: String(senderId),
-	// 			userId: String(ctx.from?.id),
-	// 		}).init();
-	// 		messageRowsPromise.push(messageEntity);
-	// 	}
-	// 	const messageRows = await Promise.all(messageRowsPromise);
-	// 	await azureTableMessageClient.insertBatch(messageRows.map((message) => message));
-	// }
 
 	get instance() {
 		return this.bot;
