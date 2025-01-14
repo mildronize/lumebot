@@ -42,6 +42,14 @@ export const envSchema = z.object({
 	 * OpenAI API Key
 	 */
 	OPENAI_API_KEY: z.string(),
+	/**
+	 * Azure Table Connection String
+	 */
+	AZURE_TABLE_CONNECTION_STRING: z.string(),
+  /**
+   * Use for share multiple app in one Azure Storage Account
+   */
+  AZURE_TABLE_PREFIX: z.string().default('MyBot'),
 });
 
 export function getEnv(env: unknown) {

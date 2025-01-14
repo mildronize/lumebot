@@ -13,6 +13,9 @@ import { webhookCallback } from "grammy";
 import { BotApp } from "./bot/bot";
 import { getEnv } from "./env";
 import { OpenAIClient } from "./bot/ai/openai";
+import { AzureTable } from "./libs/azure-table";
+import { IMessageEntity } from "./entities/messages";
+import { TableClient } from "@azure/data-tables";
 
 export default {
 	async fetch(
@@ -22,7 +25,19 @@ export default {
 	): Promise<Response> {
 		const env = getEnv(rawEnv);
 		const aiClient = new OpenAIClient(env.OPENAI_API_KEY);
-		const botApp = new BotApp({ botToken: env.BOT_TOKEN, botInfo: JSON.parse(env.BOT_INFO), allowUserIds: env.ALLOWED_USER_IDS, aiClient });
+		const azureTableClient = {
+			messages: new AzureTable<IMessageEntity>(
+				TableClient.fromConnectionString(env.AZURE_TABLE_CONNECTION_STRING, `${env.AZURE_TABLE_PREFIX}Bot`)
+			)
+		}
+		await azureTableClient.messages.createTable();
+		const botApp = new BotApp({
+			botToken: env.BOT_TOKEN,
+			botInfo: JSON.parse(env.BOT_INFO),
+			allowUserIds: env.ALLOWED_USER_IDS,
+			aiClient,
+			azureTableClient
+		});
 		botApp.init();
 		try {
 			const url = new URL(request.url);

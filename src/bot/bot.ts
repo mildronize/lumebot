@@ -4,6 +4,8 @@ import type { UserFromGetMe } from "grammy/types";
 import { authorize } from "../middlewares/authorize";
 import { OpenAIClient } from "./ai/openai";
 import { t } from "./languages";
+import { AzureTable } from "../libs/azure-table";
+import { IMessageEntity, MessageEntity } from "../entities/messages";
 
 type BotAppContext = Context;
 
@@ -33,6 +35,9 @@ export interface TelegramMessageType {
 
 export interface BotAppOptions {
 	botToken: string;
+	azureTableClient: {
+		messages: AzureTable<IMessageEntity>;
+	};
 	aiClient: OpenAIClient;
 	botInfo?: UserFromGetMe;
 	allowUserIds?: number[];
@@ -90,7 +95,9 @@ export class BotApp {
 		this.bot.api.setMyCommands([
 			{ command: 'whoiam', description: 'Who am I' },
 		]);
-		this.bot.on('message', async (ctx: Context) => this.allMessagesHandler(ctx, this.options.aiClient, this.telegram));
+		this.bot.on('message', async (ctx: Context) =>
+			this.allMessagesHandler(ctx, this.options.aiClient, this.telegram, this.options.azureTableClient.messages)
+		);
 		this.bot.catch((err) => {
 			console.error('Bot error', err);
 		});
@@ -105,18 +112,48 @@ export class BotApp {
 		});
 	}
 
-	private async handlePhoto(ctx: BotAppContext, aiClient: OpenAIClient, photo: { file_path: string, caption?: string }) {
+	private maskBotToken(text: string, action: 'mask' | 'unmask') {
+		if (action === 'mask') return text.replace(new RegExp(this.options.botToken, 'g'), '${{BOT_TOKEN}}');
+		return text.replace(new RegExp('${{BOT_TOKEN}}', 'g'), this.options.botToken);
+	}
+
+	private async handlePhoto(ctx: BotAppContext, aiClient: OpenAIClient, azureTableMessageClient: AzureTable<IMessageEntity>, photo: { photoUrl: string, caption?: string }) {
 		await ctx.reply(`${t.readingImage}...`);
 		const incomingMessages = photo.caption ? [photo.caption] : [];
-		const message = await aiClient.chatWithImage('friend', incomingMessages, photo.file_path);
+		if (photo.caption) {
+			await azureTableMessageClient.insert(await new MessageEntity({
+				payload: photo.caption,
+				userId: String(ctx.from?.id),
+				senderId: String(ctx.from?.id),
+				type: 'text',
+			}).init());
+		}
+		await azureTableMessageClient.insert(await new MessageEntity({
+			payload: this.maskBotToken(photo.photoUrl, 'mask'),
+			userId: String(ctx.from?.id),
+			senderId: String(ctx.from?.id),
+			type: 'photo',
+		}).init());
+		const message = await aiClient.chatWithImage('friend', incomingMessages, photo.photoUrl);
 		if (!message) {
 			await ctx.reply(t.sorryICannotUnderstand);
 			return;
 		}
 		await ctx.reply(message);
+		await azureTableMessageClient.insert(await new MessageEntity({
+			payload: message,
+			userId: String(ctx.from?.id),
+			senderId: String(ctx.from?.id),
+			type: 'text',
+		}).init());
 	}
 
-	private async allMessagesHandler(ctx: Context, aiClient: OpenAIClient, telegram: TelegramApiClient) {
+	private async allMessagesHandler(
+		ctx: Context,
+		aiClient: OpenAIClient,
+		telegram: TelegramApiClient,
+		azureTableMessageClient: AzureTable<IMessageEntity>
+	) {
 		// classifying the message type
 		const messages: TelegramMessageType = {
 			replyToMessage: ctx.message?.reply_to_message?.text,
@@ -130,20 +167,36 @@ export class BotApp {
 		}
 
 		const incomingMessage = messages.text || messages.caption;
+
 		if (messages.photo) {
 			const photoUrl = telegram.getFileUrl(messages.photo);
-			await this.handlePhoto(ctx, aiClient, { file_path: photoUrl, caption: incomingMessage });
+			await this.handlePhoto(ctx, aiClient, azureTableMessageClient,{ photoUrl: photoUrl, caption: incomingMessage });
 			return;
 		}
-		await this.handleMessageText(ctx, aiClient, {
-			incomingMessage: incomingMessage,
-			replyToMessage: messages.replyToMessage,
-		});
+		if (!incomingMessage || ctx.from?.id === undefined) {
+			await ctx.reply(t.sorryICannotUnderstand);
+			return;
+		}
+		await azureTableMessageClient.insert(await new MessageEntity({
+			payload: incomingMessage,
+			userId: String(ctx.from?.id),
+			senderId: String(ctx.from?.id),
+			type: 'text',
+		}).init());
+		await this.handleMessageText(
+			ctx,
+			aiClient,
+			azureTableMessageClient,
+			{
+				incomingMessage: incomingMessage,
+				replyToMessage: messages.replyToMessage,
+			});
 	}
 
 	private async handleMessageText(
 		ctx: Context,
 		aiClient: OpenAIClient,
+		azureTableMessageClient: AzureTable<IMessageEntity>,
 		messageContext: { incomingMessage: string | undefined; replyToMessage: string | undefined; }
 	) {
 		const { incomingMessage, replyToMessage } = messageContext;
@@ -161,6 +214,12 @@ export class BotApp {
 		// const message = await aiClient.chat('friend', [ctx.message?.text], ['Previous question: What is your favorite color','Previous response: blue']);
 
 		const messages = await aiClient.chat('friend', [incomingMessage], previousMessage);
+		await azureTableMessageClient.insert(await new MessageEntity({
+			payload: messages.join('\\n'),
+			userId: String(ctx.from?.id),
+			senderId: String(0),
+			type: 'text',
+		}).init());
 		let countNoResponse = 0;
 		for (const message of messages) {
 			if (!message) {
@@ -172,7 +231,23 @@ export class BotApp {
 		}
 		if (countNoResponse === messages.length) {
 			await ctx.reply(t.sorryICannotUnderstand);
+			return;
 		}
+	}
+
+	private async saveTextMessages(ctx: BotAppContext, azureTableMessageClient: AzureTable<IMessageEntity>, messages: string[], senderId: number) {
+		const messageRowsPromise: Promise<IMessageEntity>[]= [];
+		for (let order = 0; order < messages.length; order++) {
+			const messageEntity = new MessageEntity({
+				payload: messages[order],
+				type: 'text',
+				senderId: String(senderId),
+				userId: String(ctx.from?.id),
+			}).init(order);
+			messageRowsPromise.push(messageEntity);
+		}
+		const messageRows = await Promise.all(messageRowsPromise);
+		await azureTableMessageClient.insertBatch(messageRows.map((message) => message));
 	}
 
 	get instance() {
