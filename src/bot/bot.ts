@@ -2,10 +2,11 @@ import { Bot, Context } from "grammy";
 import type { UserFromGetMe } from "grammy/types";
 
 import { authorize } from "../middlewares/authorize";
-import { OpenAIClient } from "./ai/openai";
+import { OpenAIClient, PreviousMessage } from "./ai/openai";
 import { t } from "./languages";
 import { AzureTable } from "../libs/azure-table";
 import { IMessageEntity, MessageEntity } from "../entities/messages";
+import { ODataExpression } from "ts-odata-client";
 
 type BotAppContext = Context;
 
@@ -170,7 +171,7 @@ export class BotApp {
 
 		if (messages.photo) {
 			const photoUrl = telegram.getFileUrl(messages.photo);
-			await this.handlePhoto(ctx, aiClient, azureTableMessageClient,{ photoUrl: photoUrl, caption: incomingMessage });
+			await this.handlePhoto(ctx, aiClient, azureTableMessageClient, { photoUrl: photoUrl, caption: incomingMessage });
 			return;
 		}
 		if (!incomingMessage || ctx.from?.id === undefined) {
@@ -208,14 +209,31 @@ export class BotApp {
 			await ctx.reply('Please send a text message');
 			return;
 		}
-		const previousMessage = replyToMessage ? [`Previous message: ${replyToMessage}`] : [];
-		// For chaining the conversation, we need to keep track of the previous messages
-		// Example of chaining the conversation:
-		// const message = await aiClient.chat('friend', [ctx.message?.text], ['Previous question: What is your favorite color','Previous response: blue']);
+		// Step 1: add inthe replyToMessage to the previousMessage in first chat
+		const previousMessage: PreviousMessage[] = replyToMessage ? [{ type: 'text', content: replyToMessage }] : [];
+		// Step 2: Load previous messages from the database
 
+		if (ctx.from?.id) {
+			let countMaxPreviousMessage = aiClient.previousMessageLimit;
+			const query = ODataExpression.forV4<IMessageEntity>()
+				.filter((p) => p.userId.$equals(String(ctx.from?.id)))
+				.build();
+			for await (const entity of azureTableMessageClient.list(query)) {
+				if (countMaxPreviousMessage <= 0) {
+					break;
+				}
+				previousMessage.push({ type: entity.type, content: entity.payload });
+				countMaxPreviousMessage--;
+			}
+		} else {
+			console.log(`userId is not available, skipping loading previous messages`);
+		}
+		previousMessage.reverse();
+		console.log('previousMessage', previousMessage);
+		// Step 3: Chat with AI
 		const messages = await aiClient.chat('friend', [incomingMessage], previousMessage);
 		await azureTableMessageClient.insert(await new MessageEntity({
-			payload: messages.join('\\n'),
+			payload: messages.join(' '),
 			userId: String(ctx.from?.id),
 			senderId: String(0),
 			type: 'text',
@@ -235,20 +253,20 @@ export class BotApp {
 		}
 	}
 
-	private async saveTextMessages(ctx: BotAppContext, azureTableMessageClient: AzureTable<IMessageEntity>, messages: string[], senderId: number) {
-		const messageRowsPromise: Promise<IMessageEntity>[]= [];
-		for (let order = 0; order < messages.length; order++) {
-			const messageEntity = new MessageEntity({
-				payload: messages[order],
-				type: 'text',
-				senderId: String(senderId),
-				userId: String(ctx.from?.id),
-			}).init(order);
-			messageRowsPromise.push(messageEntity);
-		}
-		const messageRows = await Promise.all(messageRowsPromise);
-		await azureTableMessageClient.insertBatch(messageRows.map((message) => message));
-	}
+	// private async saveTextMessages(ctx: BotAppContext, azureTableMessageClient: AzureTable<IMessageEntity>, messages: string[], senderId: number) {
+	// 	const messageRowsPromise: Promise<IMessageEntity>[] = [];
+	// 	for (let order = 0; order < messages.length; order++) {
+	// 		const messageEntity = new MessageEntity({
+	// 			payload: messages[order],
+	// 			type: 'text',
+	// 			senderId: String(senderId),
+	// 			userId: String(ctx.from?.id),
+	// 		}).init();
+	// 		messageRowsPromise.push(messageEntity);
+	// 	}
+	// 	const messageRows = await Promise.all(messageRowsPromise);
+	// 	await azureTableMessageClient.insertBatch(messageRows.map((message) => message));
+	// }
 
 	get instance() {
 		return this.bot;

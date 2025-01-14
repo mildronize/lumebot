@@ -33,7 +33,7 @@ export interface IMessageEntity extends AzureTableEntityBase {
 /**
  * Message History entity
  * - PartitionKey: `{YYYY}-{userId:20}` (Created Date) & UserId padding to 20 characters
- * - RowKey: `{YYYY}{MM}{DD}{HH}{mm}{ss}-{batchOrder:4}-{messageHash:10}` (Created Date, batchOrder padding to 4 & Message Hash with first 10 characters)
+ * - RowKey: `{LogTailTimestamp}-{messageHash:10}` (Created Date, Message Hash with first 10 characters)
  */
 export class MessageEntity implements AsyncEntityKeyGenerator<IMessageEntity> {
 
@@ -53,9 +53,9 @@ export class MessageEntity implements AsyncEntityKeyGenerator<IMessageEntity> {
 	 * @param batchOrder
 	 * @returns
 	 */
-	async init(batchOrder: number = 0): Promise<IMessageEntity> {
+	async init(): Promise<IMessageEntity> {
 		this._value.partitionKey = await this.getPartitionKey();
-		this._value.rowKey = await this.getRowKey(batchOrder);
+		this._value.rowKey = await this.getRowKey();
 		return this.value as IMessageEntity;
 	}
 
@@ -64,14 +64,30 @@ export class MessageEntity implements AsyncEntityKeyGenerator<IMessageEntity> {
 		return `${dayjs(object.createdAt).utc().format('YYYY')}-${object.userId.padStart(20, '0')}`;
 	}
 
-	async getRowKey(batchOrder: number = 0): Promise<string> {
+	async getRowKey(): Promise<string> {
 		const object = this._value;
-		if(batchOrder < 0 || batchOrder > 9999) throw new Error('batchOrder must be between 0 and 9999');
-		return `${dayjs(object.createdAt).utc().format('YYYYMMDDHHmmss')}-${String(batchOrder).padStart(4, '0')}-${await this.hash(object.payload)}`;
+		return `${this.calculateDescendingIndex(Math.floor(Date.now() / 1000))}-${await this.hash(object.payload)}`;
 	}
 
 	async hash(message: string, limit = 10): Promise<string> {
 		return (await sha3(message)).slice(0, limit);
 	}
+
+	/**
+	 * Calculate the descending index based on the timestamp, for log tail pattern
+	 * @ref https://learn.microsoft.com/en-us/azure/storage/tables/table-storage-design-patterns#log-tail-pattern
+	 *
+	 * @param timestamp Unix timestamp
+	 * @param maxTimestamp Default to 100_000_000_000 (Represent November 16, 5138, at 09:46:40) which is larger enough for the next 2000 years
+	 * @returns
+	 */
+	calculateDescendingIndex(timestamp: number, maxTimestamp: number = 100_000_000_000): string {
+    // Subtract the timestamp from the maximum possible value
+    const descendingIndex = maxTimestamp - timestamp;
+
+    // Pad with zeros to ensure uniform length for consistent sorting
+    return descendingIndex.toString().padStart(maxTimestamp.toString().length, '0');
+}
+
 
 }
