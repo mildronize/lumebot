@@ -244,7 +244,6 @@ export class BotApp {
 			console.log(`userId is not available, skipping loading previous messages`);
 		}
 		previousMessage.reverse();
-		console.log('previousMessage', previousMessage);
 		// Step 3: Chat with AI
 		const messages = await aiClient.chat('friend', chatMode, [incomingMessage], previousMessage);
 		await azureTableMessageClient.insert(await new MessageEntity({
