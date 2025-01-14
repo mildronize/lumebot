@@ -7,6 +7,13 @@ export interface PreviousMessage {
 	content: string;
 }
 
+/**
+ * The character role of the agent
+ * natural: the agent will answer not too long, not too short
+ * default: the agent will answer with the default answer mode
+ */
+export type ChatMode = 'natural' | 'default';
+
 export class OpenAIClient {
 	characterRole: keyof typeof CharacterRole;
 	client: OpenAI;
@@ -53,12 +60,12 @@ export class OpenAIClient {
 	 * @param {string[]} [previousMessages=[]] - The previous messages to chat with the AI
 	 * @returns
 	 */
-	async chat(character: keyof typeof SystemRole, messages: string[], previousMessages: PreviousMessage[] = []): Promise<string[]> {
+	async chat(character: keyof typeof SystemRole, chatMode: ChatMode, messages: string[], previousMessages: PreviousMessage[] = []): Promise<string[]> {
 		const chatCompletion = await this.client.chat.completions.create({
 			messages: [
 				...SystemRole[character],
 				...CharacterRole[this.characterRole],
-				...this.generateSystemMessages([this.dynamicLimitAnswerSentences(3, 5)]),
+				...(chatMode === 'natural' ? this.generateSystemMessages([this.dynamicLimitAnswerSentences(3, 5)]) : []),
 				// ...this.generateSystemMessages([this.answerMode]),
 				...this.generatePreviousMessages(previousMessages),
 				...this.generateTextMessages(messages),

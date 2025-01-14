@@ -2,11 +2,12 @@ import { Bot, Context } from "grammy";
 import type { UserFromGetMe } from "grammy/types";
 
 import { authorize } from "../middlewares/authorize";
-import { OpenAIClient, PreviousMessage } from "./ai/openai";
+import { ChatMode, OpenAIClient, PreviousMessage } from "./ai/openai";
 import { t } from "./languages";
 import { AzureTable } from "../libs/azure-table";
 import { IMessageEntity, MessageEntity } from "../entities/messages";
 import { ODataExpression } from "ts-odata-client";
+import { Chat } from "openai/resources/index.mjs";
 
 type BotAppContext = Context;
 
@@ -93,11 +94,19 @@ export class BotApp {
 		this.bot.command("whoiam", async (ctx: Context) => {
 			await ctx.reply(`${t.yourAre} ${ctx.from?.first_name} (id: ${ctx.message?.from?.id})`);
 		});
+		this.bot.command("ai", async (ctx) => {
+			// With the `ai` command, the user can chat with the AI using Full Response Mode
+			const incomingMessage = ctx.match;
+			return this.handleMessageText(ctx, this.options.aiClient, this.options.azureTableClient.messages, {
+				incomingMessage,
+			}, 'default');
+		});
 		this.bot.api.setMyCommands([
 			{ command: 'whoiam', description: 'Who am I' },
+			{ command: 'ai', description: 'Chat With AI using Full Response' },
 		]);
 		this.bot.on('message', async (ctx: Context) =>
-			this.allMessagesHandler(ctx, this.options.aiClient, this.telegram, this.options.azureTableClient.messages)
+			this.allMessagesHandler(ctx, this.options.aiClient, this.telegram, this.options.azureTableClient.messages, 'natural')
 		);
 		this.bot.catch((err) => {
 			console.error('Bot error', err);
@@ -153,7 +162,8 @@ export class BotApp {
 		ctx: Context,
 		aiClient: OpenAIClient,
 		telegram: TelegramApiClient,
-		azureTableMessageClient: AzureTable<IMessageEntity>
+		azureTableMessageClient: AzureTable<IMessageEntity>,
+		chatMode: ChatMode
 	) {
 		// classifying the message type
 		const messages: TelegramMessageType = {
@@ -178,12 +188,6 @@ export class BotApp {
 			await ctx.reply(t.sorryICannotUnderstand);
 			return;
 		}
-		await azureTableMessageClient.insert(await new MessageEntity({
-			payload: incomingMessage,
-			userId: String(ctx.from?.id),
-			senderId: String(ctx.from?.id),
-			type: 'text',
-		}).init());
 		await this.handleMessageText(
 			ctx,
 			aiClient,
@@ -191,14 +195,16 @@ export class BotApp {
 			{
 				incomingMessage: incomingMessage,
 				replyToMessage: messages.replyToMessage,
-			});
+			},
+			chatMode);
 	}
 
 	private async handleMessageText(
 		ctx: Context,
 		aiClient: OpenAIClient,
 		azureTableMessageClient: AzureTable<IMessageEntity>,
-		messageContext: { incomingMessage: string | undefined; replyToMessage: string | undefined; }
+		messageContext: { incomingMessage: string | undefined; replyToMessage?: string; },
+		chatMode: ChatMode,
 	) {
 		const { incomingMessage, replyToMessage } = messageContext;
 		if (!aiClient) {
@@ -209,6 +215,15 @@ export class BotApp {
 			await ctx.reply('Please send a text message');
 			return;
 		}
+
+		// Save the incoming message to the database
+		await azureTableMessageClient.insert(await new MessageEntity({
+			payload: incomingMessage,
+			userId: String(ctx.from?.id),
+			senderId: String(ctx.from?.id),
+			type: 'text',
+		}).init());
+
 		// Step 1: add inthe replyToMessage to the previousMessage in first chat
 		const previousMessage: PreviousMessage[] = replyToMessage ? [{ type: 'text', content: replyToMessage }] : [];
 		// Step 2: Load previous messages from the database
@@ -231,7 +246,7 @@ export class BotApp {
 		previousMessage.reverse();
 		console.log('previousMessage', previousMessage);
 		// Step 3: Chat with AI
-		const messages = await aiClient.chat('friend', [incomingMessage], previousMessage);
+		const messages = await aiClient.chat('friend', chatMode, [incomingMessage], previousMessage);
 		await azureTableMessageClient.insert(await new MessageEntity({
 			payload: messages.join(' '),
 			userId: String(ctx.from?.id),
