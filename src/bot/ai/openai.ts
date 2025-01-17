@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import type { ChatCompletionMessageParam } from 'openai/resources/index.mjs';
+import type { ChatCompletionMessageParam } from 'openai/resources';
 import { SystemRole, CharacterRole, sentenceEnd } from './characters';
 
 export interface PreviousMessage {

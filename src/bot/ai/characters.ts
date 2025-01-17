@@ -1,4 +1,4 @@
-import type { ChatCompletionMessageParam } from 'openai/resources/index.mjs';
+import type { ChatCompletionMessageParam } from 'openai/resources';
 
 // `~` is used to indicate the end of the sentence, use for splitting the sentence when the AI generate the response
 export const sentenceEnd = '~';

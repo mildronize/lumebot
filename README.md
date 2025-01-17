@@ -1,4 +1,4 @@
-# Grammybot
+# Lume Bot
 
 ## Dev
 
