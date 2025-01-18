@@ -4,6 +4,7 @@ import { getEnv } from "../src/env";
 import { config } from './_config';
 import { TunnelNgrokManager } from './libs/TunnelNgrokManager';
 import { createPinoLogger } from './utils/logger';
+import { TelegramBotClient } from './libs/TelegramClient';
 
 /**
  * After running bot using `start`, it will remove the webhook and start polling.
@@ -31,10 +32,15 @@ export async function preDeploy() {
 }
 
 function startTunnel() {
+	const env = getEnv(process.env);
 	const tunnelManager = new TunnelNgrokManager({
 		logger: createPinoLogger('tunnel', config.logLevel),
-		preStart: (tunnelUrl) => {
-			console.log('Setting webhook to', tunnelUrl);
+		preStart: async (tunnelUrl, logger) => {
+			const telegramBotClient = new TelegramBotClient({
+				token: env.BOT_TOKEN,
+				logger,
+			});
+			await telegramBotClient.setWebhook(tunnelUrl + '/api/telegramBot');
 		}
 	});
 	tunnelManager.start();

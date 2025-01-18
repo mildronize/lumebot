@@ -17,7 +17,7 @@ export interface TunnelNgrokManagerOptions {
 	 * @default 1000 ms
 	 */
 	healthCheckInterval: number;
-	preStart?: (tunnelUrl: string) => void;
+	preStart?: (tunnelUrl: string, logger: Logger) => Promise<void> | void;
 	logger: Logger;
 }
 
@@ -134,7 +134,7 @@ export class TunnelNgrokManager implements TunnelManager {
 			throw new Error('Failed to get Ngrok tunnel Public URL');
 		}
 		// Run the preStart function
-		this.options.preStart(tunnelUrl);
+		await this.options.preStart(tunnelUrl, this.logger);
 	}
 
 	async getTunnelUrl(url: string): Promise<string | undefined> {
@@ -158,7 +158,7 @@ export class TunnelNgrokManager implements TunnelManager {
 				return response.status === 200;
 			} catch (error) {
 				// Assuming non-200 or fetch errors mean the tunnel is not ready yet.
-				this.logger.info(`"${serviceName}" is not ready yet`);
+				this.logger.debug(`"${serviceName}" is not ready yet`);
 				return false;
 			}
 		};
@@ -166,7 +166,7 @@ export class TunnelNgrokManager implements TunnelManager {
 		while (!(await isBackendReady())) {
 			await new Promise(resolve => setTimeout(resolve, this.options.healthCheckInterval));
 		}
-		this.logger.info(`"${serviceName}" is ready`);
+		this.logger.debug(`"${serviceName}" is ready`);
 	}
 
 	getTunnelResourceInfo(tunnelResourceInfo: unknown): z.infer<typeof TunnelNgrokManager.resourceInfoSchema> {
