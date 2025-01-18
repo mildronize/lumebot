@@ -6,7 +6,7 @@ const { bot, asyncTask } = bootstrap();
 
 app.http('telegramBot', {
 	methods: ['GET', 'POST'],
-	authLevel: 'anonymous',
+	authLevel: 'function',
 	handler: async (request, _context) => {
 		await asyncTask();
 		return webhookCallback(bot, "azure-v4")(request as any)

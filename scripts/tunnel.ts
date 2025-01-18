@@ -15,7 +15,7 @@ function startTunnel() {
 				token: env.BOT_TOKEN,
 				logger,
 			});
-			await telegramBotClient.setWebhook(tunnelUrl + '/api/telegramBot');
+			await telegramBotClient.setWebhook(new URL(config.telegramWebhookPath, tunnelUrl).toString());
 		}
 	});
 	tunnelManager.start();
