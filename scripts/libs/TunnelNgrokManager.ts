@@ -1,8 +1,9 @@
 import { $ } from "bun";
 import { TunnelManager } from "./interfaces/TunnelManager";
-import { XMLParser } from "fast-xml-parser";
 import fs from 'fs';
 import path from "path";
+import { z, ZodError } from "zod";
+import { fromZodError } from "zod-validation-error";
 
 export interface TunnelNgrokManagerOptions {
 	ngrokPort: number;
@@ -19,6 +20,14 @@ export interface TunnelNgrokManagerOptions {
 
 export class TunnelNgrokManager implements TunnelManager {
 	public options: TunnelNgrokManagerOptions;
+	static resourceInfoSchema = z.object({
+		tunnels: z.array(
+			z.object({
+				public_url: z.string(),
+			})
+		),
+	});
+
 	public static readonly defaultOptions: TunnelNgrokManagerOptions = {
 		forwardPort: 7071,
 		ngrokPort: 4040,
@@ -42,7 +51,7 @@ export class TunnelNgrokManager implements TunnelManager {
 			// Run preStart function
 			this.preStart();
 			// Setup signal handlers
-			await this.setupNgrokSignalHandlers();
+			this.setupNgrokSignalHandlers();
 			// Start ngrok tunnel
 			await $`ngrok http ${this.options.forwardPort} --log=stdout > ${this.options.logPath}`;
 		}
@@ -51,14 +60,13 @@ export class TunnelNgrokManager implements TunnelManager {
 		}
 	}
 
-	async setupNgrokSignalHandlers(): Promise<void> {
+	setupNgrokSignalHandlers() {
 		const isWindows = process.platform === "win32";
 		if (isWindows) {
 			console.error("This script is not supported on Windows.");
 			return;
 		}
-		const ngrokProcessId = await this.findNgrokProcessId();
-		this.setupSignalHandlers(ngrokProcessId);
+		this.setupSignalHandlers();
 	}
 
 	private async findNgrokProcessId(): Promise<string | null> {
@@ -81,11 +89,12 @@ export class TunnelNgrokManager implements TunnelManager {
 	}
 
 	// Function to handle cleanup and exit signals
-	private setupSignalHandlers(pid: string | null) {
+	private setupSignalHandlers() {
 		const signals = ["SIGTERM", "SIGINT", "SIGHUP"];
 		signals.forEach((signal) =>
 			process.on(signal, async () => {
 				console.log(`Received ${signal}. Cleaning up...`);
+				const pid = await this.findNgrokProcessId();
 				if (pid) await this.killProcess(pid);
 				process.exit(0);
 			})
@@ -97,20 +106,26 @@ export class TunnelNgrokManager implements TunnelManager {
 			return;
 		}
 		// Get the tunnel URL
-		const tunnelMetadataUrl = `http://localhost:${this.options.ngrokPort}/api/tunnels`;
-		await this.waitUntilUrlReady(tunnelMetadataUrl, 'Ngrok Tunnel');
-		const tunnelUrl = await this.getTunnelUrl(tunnelMetadataUrl);
+		const tunnelResourceInfoUrl = `http://localhost:${this.options.ngrokPort}/api/tunnels`;
+		await this.waitUntilUrlReady(tunnelResourceInfoUrl, 'Ngrok Tunnel');
+		const tunnelUrl = await this.getTunnelUrl(tunnelResourceInfoUrl);
 		console.log('Tunnel URL:', tunnelUrl);
+		if (!tunnelUrl) {
+			throw new Error('Failed to get Ngrok tunnel Public URL');
+		}
 		// Run the preStart function
 		this.options.preStart(tunnelUrl);
 	}
 
-	async getTunnelUrl(url: string): Promise<string> {
+	async getTunnelUrl(url: string): Promise<string | undefined> {
+		// Somehow fetch api convert xml to json automatically
 		const tunnelResponse = await (await fetch(url)).text();
-		console.log('Tunnel Response:', tunnelResponse);
-		const tunnelJson = new XMLParser().parse(tunnelResponse);
-		console.log('Tunnel JSON:', tunnelJson);
-		return '';
+		// const tunnelJson = new XMLParser().parse(tunnelResponse);
+		const tunnelResourceInfo = this.getTunnelResourceInfo(JSON.parse(tunnelResponse));
+		if (tunnelResourceInfo.tunnels.length > 0) {
+			return tunnelResourceInfo.tunnels[0].public_url;
+		}
+		return undefined;
 	}
 
 	/**
@@ -134,4 +149,16 @@ export class TunnelNgrokManager implements TunnelManager {
 		console.log(`"${serviceName}" is ready`);
 	}
 
+	getTunnelResourceInfo(tunnelResourceInfo: unknown): z.infer<typeof TunnelNgrokManager.resourceInfoSchema> {
+		try {
+			return TunnelNgrokManager.resourceInfoSchema.parse(tunnelResourceInfo);
+		} catch (error: unknown) {
+			if (error instanceof ZodError) {
+				console.error(fromZodError(error).message);
+			} else {
+				console.error('Unknown error', error);
+			}
+			throw new Error('Invalid Ngrok Tunnel Resource Info schema, ngrok may have changed its API');
+		}
+	}
 }
