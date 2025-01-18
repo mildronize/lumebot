@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from "path";
 import { z, ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
+import { Logger } from '../utils/logger/logger';
 
 export interface TunnelNgrokManagerOptions {
 	ngrokPort: number;
@@ -16,6 +17,7 @@ export interface TunnelNgrokManagerOptions {
 	 */
 	healthCheckInterval: number;
 	preStart?: (tunnelUrl: string) => void;
+	logger?: Logger;
 }
 
 export class TunnelNgrokManager implements TunnelManager {
@@ -54,9 +56,9 @@ export class TunnelNgrokManager implements TunnelManager {
 			// Run preStart function
 			this.preStart();
 			// Setup signal handlers
-			this.setupNgrokSignalHandlers();
+			this.setupNgrokSignalHandlers(),
 			// Start ngrok tunnel
-			await $`ngrok http ${this.options.forwardPort} --log=stdout > ${this.options.logPath}`;
+			await $`ngrok http ${this.options.forwardPort} --log=stdout > ${this.options.logPath}`
 		}
 		catch (error) {
 			throw new Error(`Error starting ngrok tunnel: ${error}`);
