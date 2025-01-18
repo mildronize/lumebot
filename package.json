@@ -1,11 +1,11 @@
 {
   "name": "lumebot",
-  "version": "1.1.0",
+  "version": "2.0.0-0",
   "main": "dist/src/functions/*.js",
   "private": true,
   "scripts": {
     "deploy:pre": "bun run scripts/pre-deploy.ts",
-		"tunnel": "bun run scripts/tunnel.ts",
+    "tunnel": "bun run scripts/tunnel.ts",
     "build": "tsc",
     "watch": "tsc -w",
     "clean": "rimraf dist",
