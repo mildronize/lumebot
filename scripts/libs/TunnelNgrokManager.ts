@@ -5,6 +5,8 @@ import path from "path";
 import { z, ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { Logger } from '../utils/logger/logger';
+import { Console } from "console";
+import { ConsoleLogger } from '../utils/logger/console-logger';
 
 export interface TunnelNgrokManagerOptions {
 	ngrokPort: number;
@@ -17,11 +19,12 @@ export interface TunnelNgrokManagerOptions {
 	 */
 	healthCheckInterval: number;
 	preStart?: (tunnelUrl: string) => void;
-	logger?: Logger;
+	logger: Logger;
 }
 
 export class TunnelNgrokManager implements TunnelManager {
 	public options: TunnelNgrokManagerOptions;
+	private logger: Logger;
 	static resourceInfoSchema = z.object({
 		tunnels: z.array(
 			z.object({
@@ -36,10 +39,12 @@ export class TunnelNgrokManager implements TunnelManager {
 		logPath: './.logs/ngrok.log',
 		healthCheckUrl: 'http://localhost:7071/',
 		healthCheckInterval: 1000,
+		logger: new ConsoleLogger(),
 	};
 
 	constructor(options?: Partial<TunnelNgrokManagerOptions>) {
 		this.options = Object.assign({}, TunnelNgrokManager.defaultOptions, options);
+		this.logger = this.options.logger;
 		// console.log('TunnelNgrokManager created with options:', this.options);
 	}
 
@@ -57,8 +62,8 @@ export class TunnelNgrokManager implements TunnelManager {
 			this.preStart();
 			// Setup signal handlers
 			this.setupNgrokSignalHandlers(),
-			// Start ngrok tunnel
-			await $`ngrok http ${this.options.forwardPort} --log=stdout > ${this.options.logPath}`
+				// Start ngrok tunnel
+				await $`ngrok http ${this.options.forwardPort} --log=stdout > ${this.options.logPath}`
 		}
 		catch (error) {
 			throw new Error(`Error starting ngrok tunnel: ${error}`);
