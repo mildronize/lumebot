@@ -41,16 +41,17 @@ export class TunnelNgrokManager implements TunnelManager {
 			this.waitUntilUrlReady(this.options.healthCheckUrl, 'Backend');
 			// Run preStart function
 			this.preStart();
+			// Setup signal handlers
+			await this.setupNgrokSignalHandlers();
 			// Start ngrok tunnel
 			await $`ngrok http ${this.options.forwardPort} --log=stdout > ${this.options.logPath}`;
 		}
 		catch (error) {
-			await this.clearNgrokTunnelServer();
-			throw new Error('Error starting tunnel');
+			throw new Error(`Error starting ngrok tunnel: ${error}`);
 		}
 	}
 
-	async clearNgrokTunnelServer(): Promise<void> {
+	async setupNgrokSignalHandlers(): Promise<void> {
 		const isWindows = process.platform === "win32";
 		if (isWindows) {
 			console.error("This script is not supported on Windows.");
@@ -74,7 +75,8 @@ export class TunnelNgrokManager implements TunnelManager {
 		return null;
 	}
 
-	async killProcess(pid: string): Promise<void> {
+	async killProcess(pid: string, processName = 'ngrok'): Promise<void> {
+		console.log(`Killing ${processName} process with pid ${pid}`);
 		await $`kill -9 ${pid}`;
 	}
 
