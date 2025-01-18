@@ -56,7 +56,9 @@ export class TunnelNgrokManager implements TunnelManager {
 				fs.mkdirSync(path.dirname(this.options.logPath), { recursive: true });
 			}
 			// Show backend status
-			this.waitUntilUrlReady(this.options.healthCheckUrl, 'Backend');
+			this.waitUntilUrlReady(this.options.healthCheckUrl, 'Backend').then(() => {
+				this.logger.info('Backend is ready');
+			});
 			// Run preStart function
 			this.preStart();
 			// Setup signal handlers

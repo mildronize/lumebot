@@ -5,10 +5,11 @@
   "private": true,
   "scripts": {
     "deploy:pre": "bun run scripts/pre-deploy.ts",
+		"tunnel": "bun run scripts/tunnel.ts",
     "build": "tsc",
     "watch": "tsc -w",
     "clean": "rimraf dist",
-    "dev": "run-p watch start",
+    "dev": "run-p watch start tunnel",
     "prestart": "npm run clean && npm run build",
     "start": "func start",
     "release": "release-it"
