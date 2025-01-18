@@ -1,5 +1,6 @@
 import { z, ZodError } from "zod";
 import { fromZodError } from 'zod-validation-error';
+import { getErrorMessage } from '../scripts/utils/error';
 
 export const envSchema = z.object({
 	NODE_ENV: z.string().default('production'),
@@ -15,30 +16,15 @@ export const envSchema = z.object({
 	 */
 	ALLOWED_USER_IDS: z.preprocess((val: unknown) => {
 		if (val === '' || val === undefined || val === null) return [];
-		if(typeof val === 'number') return [val];
+		if (typeof val === 'number') return [val];
 		return typeof val === 'string' ? val.trim().split(',').map(Number) : [];
 	}, z.array(z.number())),
-
-	/**
-	 * Telegram webhook URL
-	 *
-	 * Use in development mode only
-	 */
-	TELEGRAM_WEBHOOK_URL: z.string().optional(),
 	/**
 	 * Protected Bot
 	 *
 	 * @default true
 	 */
 	PROTECTED_BOT: z.boolean().default(true),
-	// /**
-	//  * Webhook Secret
-	//  *
-	//  * Use to verify the request is coming from Telegram
-	//  *
-	//  * When not set, it will automatically generate a secret
-	//  */
-	// WEBHOOK_SECRET: z.string().optional(),
 	/**
 	 * OpenAI API Key
 	 */
@@ -47,10 +33,20 @@ export const envSchema = z.object({
 	 * Azure Table Connection String
 	 */
 	AZURE_TABLE_CONNECTION_STRING: z.string(),
-  /**
-   * Use for share multiple app in one Azure Storage Account
-   */
-  AZURE_TABLE_PREFIX: z.string().default('MyBot'),
+	/**
+	 * Use for share multiple app in one Azure Storage Account
+	 */
+	AZURE_TABLE_PREFIX: z.string().default('MyBot'),
+});
+
+/**
+ * Development Environment Schema
+ */
+export const developmentEnvSchema = envSchema.extend({
+	/**
+	 * Telegram webhook URL
+	 */
+	TELEGRAM_WEBHOOK_URL: z.string(),
 	/**
 	 * Azure Functions Name
 	 */
@@ -69,15 +65,20 @@ export const envSchema = z.object({
 	AZURE_FUNCTIONS_SUBSCRIPTION: z.string(),
 });
 
+export function getDevelopmentEnv(env: unknown) {
+	try {
+		return developmentEnvSchema.parse(env);
+	} catch (error: unknown) {
+		console.error(getErrorMessage(error));
+		throw new Error('Invalid environment variables');
+	}
+}
+
 export function getEnv(env: unknown) {
 	try {
 		return envSchema.parse(env);
 	} catch (error: unknown) {
-		if (error instanceof ZodError) {
-			console.error(fromZodError(error).message);
-		} else {
-			console.error('Unknown error', error);
-		}
+		console.error(getErrorMessage(error));
 		throw new Error('Invalid environment variables');
 	}
 }

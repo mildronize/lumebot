@@ -1,16 +1,12 @@
 import 'dotenv/config';
 
-import { getEnv } from "../src/env";
+import { getDevelopmentEnv } from "../src/env";
 import { TelegramBotClient } from './libs/TelegramClient';
 import { config } from './_config';
 import { AzureFunctionsClient } from './libs/AzureFunctionsClient';
 
 export async function preDeploy() {
-	const env = getEnv(process.env);
-
-	if (!env.TELEGRAM_WEBHOOK_URL) {
-		throw new Error('TELEGRAM_WEBHOOK_URL is not set');
-	}
+	const env = getDevelopmentEnv(process.env);
 	const telegramBotClient = new TelegramBotClient({
 		token: env.BOT_TOKEN,
 	});
