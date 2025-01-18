@@ -1,14 +1,14 @@
 {
   "name": "lumebot",
   "version": "1.1.0",
-	"main": "dist/src/functions/*.js",
+  "main": "dist/src/functions/*.js",
   "private": true,
   "scripts": {
     "deploy:pre": "bun run scripts/pre-deploy.ts",
     "build": "tsc",
     "watch": "tsc -w",
     "clean": "rimraf dist",
-		"dev": "run-p watch start",
+    "dev": "run-p watch start",
     "prestart": "npm run clean && npm run build",
     "start": "func start",
     "release": "release-it"
@@ -28,6 +28,7 @@
     "@azure/functions": "^4.6.0",
     "dayjs": "^1.11.13",
     "dotenv": "^16.4.7",
+    "fast-xml-parser": "^4.5.1",
     "grammy": "github:grammyjs/grammY#support-azure-v4",
     "hash-wasm": "^4.12.0",
     "lodash.chunk": "^4.2.0",

@@ -1,8 +1,8 @@
 import 'dotenv/config';
 
 import { getEnv } from "../src/env";
-import { SecretManager } from "./secret-manager";
 import { config } from './_config';
+import { TunnelNgrokManager } from './libs/TunnelNgrokManager';
 
 /**
  * After running bot using `start`, it will remove the webhook and start polling.
@@ -29,4 +29,15 @@ export async function preDeploy() {
 	await fetch(targetUrl);
 }
 
-preDeploy();
+function startTunnel(){
+	const tunnelManager = new TunnelNgrokManager({
+		preStart: (tunnelUrl) => {
+			console.log('Setting webhook to', tunnelUrl);
+		}
+	});
+	tunnelManager.start();
+}
+
+startTunnel();
+
+// preDeploy();
