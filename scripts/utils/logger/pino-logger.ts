@@ -63,19 +63,19 @@ export class PinoLogger implements Logger {
   constructor(private logger: pino.Logger) { }
 
   info(...messages: string[]) {
-    this.logger.info(messages);
+    this.logger.info(messages.join(" "));
   }
   debug(...messages: string[]) {
-    this.logger.debug(messages);
+    this.logger.debug(messages.join(" "));
   }
   error(...messages: string[]) {
-    this.logger.error(messages);
+    this.logger.error(messages.join(" "));
   }
   warn(...messages: string[]) {
     this.logger.warn(messages);
   }
   fatal(...messages: string[]) {
-    this.logger.fatal(messages);
+    this.logger.fatal(messages.join(" "));
     return new Error(messages.join(" "));
   }
 }
