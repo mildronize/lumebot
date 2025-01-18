@@ -1,6 +1,7 @@
 #:schema node_modules/wrangler/config-schema.json
 name = "grammybot"
 main = "src/index.ts"
+compatibility_flags = [ "nodejs_compat" ]
 compatibility_date = "2025-01-09"
 
 # Workers Logs
@@ -23,19 +24,10 @@ enabled = true
 # - https://developers.cloudflare.com/workers/configuration/secrets/
 [vars]
 # Get from https://api.telegram.org/bot<BOT_TOKEN>/getMe
-BOT_INFO = """{
-  "id": 1234567890,
-  "is_bot": true,
-  "first_name": "Bot Name",
-  "username": "Bot Username",
-  "can_join_groups": true,
-  "can_read_all_group_messages": false,
-  "supports_inline_queries": false,
-  "can_connect_to_business": false,
-  "has_main_web_app": false
-}"""
+BOT_INFO = """{"id":7806859653,"is_bot":true,"first_name":"Krati","username":"Krati19Bot","can_join_groups":true,"can_read_all_group_messages":false,"supports_inline_queries":false,"can_connect_to_business":false,"has_main_web_app":false}"""
 # Allow User IDs to use the bot
-# ALLOWED_USER_IDS=
+ALLOWED_USER_IDS=6562752036
+
 
 # Bind the Workers AI model catalog. Run machine learning models, powered by serverless GPUs, on Cloudflare’s global network
 # Docs: https://developers.cloudflare.com/workers/wrangler/configuration/#workers-ai
@@ -111,7 +103,7 @@ BOT_INFO = """{
 # Docs: https://developers.cloudflare.com/workers/wrangler/configuration/#r2-buckets
 # [[r2_buckets]]
 # binding = "MY_BUCKET"
-# bucket_name = "my-bucket"
+# bucket_name = "grammybot-bucket"
 
 # Bind another Worker service. Use this binding to call another Worker without network overhead.
 # Docs: https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings

@@ -1,32 +1,20 @@
-# Grammybot
+# Lume Bot
 
 ## Dev
 
 ```
-bun install
-bun dev
+npm run dev
 ```
 
 ## Deploy
 
-Setup Secret
-```sh
-# Setup BOT_TOKEN for Telegram Bot Token getting from BotFather
-npx wrangler secret put BOT_TOKEN
-# Setup WEBHOOK_SECRET for Telegram Webhook Secret, random string, avoid special characters for better URL encoding
-npx wrangler secret put WEBHOOK_SECRET
 ```
-
-Deploy
-
+npm run build
+npm run deploy:pre
+func azure functionapp publish <functionAppName>
 ```
-bun install
-bun run deploy
-```
-
-https://grammy.dev/hosting/cloudflare-workers-nodejs
-
 
 ## Doc
 
+- Example: https://grammy.dev/hosting/cloudflare-workers-nodejs
 - Testing: https://github.com/PavelPolyakov/grammy-with-tests
