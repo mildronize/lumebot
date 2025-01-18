@@ -22,8 +22,8 @@ export type InferAzureTable<T> = T extends AzureTable<infer U> ? U : never;
 export interface AsyncEntityKeyGenerator<T> {
   getPartitionKey: () => Promise<string>;
   getRowKey: () => Promise<string>;
-	init: () => Promise<T>;
-	value: T;
+  init: () => Promise<T>;
+  value: T;
 }
 
 /**
@@ -40,7 +40,7 @@ export interface AsyncEntityKeyGenerator<T> {
 export interface EntityKeyGenerator<T> {
   getPartitionKey: () => string;
   getRowKey: () => string;
-	value: T;
+  value: T;
 }
 
 /**
@@ -65,10 +65,7 @@ export class AzureTable<TEntity extends AzureTableEntityBase> {
    *
    * select prop type may incorrect
    */
-  list(
-    queryOptions?: ListTableEntitiesOptions['queryOptions'],
-    listTableEntitiesOptions?: Omit<ListTableEntitiesOptions, 'queryOptions'>
-  ) {
+  list(queryOptions?: ListTableEntitiesOptions['queryOptions'], listTableEntitiesOptions?: Omit<ListTableEntitiesOptions, 'queryOptions'>) {
     return this.client.listEntities<TEntity>({
       ...listTableEntitiesOptions,
       queryOptions,
@@ -77,7 +74,7 @@ export class AzureTable<TEntity extends AzureTableEntityBase> {
 
   async listAll(
     queryOptions?: ListTableEntitiesOptions['queryOptions'],
-    listTableEntitiesOptions?: Omit<ListTableEntitiesOptions, 'queryOptions'>
+    listTableEntitiesOptions?: Omit<ListTableEntitiesOptions, 'queryOptions'>,
   ) {
     const entities = this.list(queryOptions, listTableEntitiesOptions);
     const result = [];
@@ -90,7 +87,7 @@ export class AzureTable<TEntity extends AzureTableEntityBase> {
 
   async count(
     queryOptions?: ListTableEntitiesOptions['queryOptions'],
-    listTableEntitiesOptions?: Omit<ListTableEntitiesOptions, 'queryOptions'>
+    listTableEntitiesOptions?: Omit<ListTableEntitiesOptions, 'queryOptions'>,
   ) {
     let count = 0;
     const entities = this.list(queryOptions, listTableEntitiesOptions);
@@ -100,8 +97,6 @@ export class AzureTable<TEntity extends AzureTableEntityBase> {
     }
     return count;
   }
-
-
 
   async insert(entity: TEntity) {
     return this.client.createEntity<TEntity>(entity);
@@ -117,7 +112,7 @@ export class AzureTable<TEntity extends AzureTableEntityBase> {
       const entityChunks = chunk(entities, this.maxBatchChange);
       for (const entityChunk of entityChunks) {
         const transaction = new TableTransaction();
-        entityChunk.forEach(entity => transaction.createEntity(entity));
+        entityChunk.forEach((entity) => transaction.createEntity(entity));
         await this.client.submitTransaction(transaction.actions);
       }
     }
@@ -132,7 +127,7 @@ export class AzureTable<TEntity extends AzureTableEntityBase> {
       const entityChunks = chunk(entities, this.maxBatchChange);
       for (const entityChunk of entityChunks) {
         const transaction = new TableTransaction();
-        entityChunk.forEach(entity => transaction.upsertEntity(entity));
+        entityChunk.forEach((entity) => transaction.upsertEntity(entity));
         await this.client.submitTransaction(transaction.actions);
       }
     }
@@ -144,7 +139,7 @@ export class AzureTable<TEntity extends AzureTableEntityBase> {
       const entityChunks = chunk(entities, this.maxBatchChange);
       for (const entityChunk of entityChunks) {
         const transaction = new TableTransaction();
-        entityChunk.forEach(entity => {
+        entityChunk.forEach((entity) => {
           const { partitionKey, rowKey } = entity;
           transaction.deleteEntity(partitionKey, rowKey);
         });
@@ -161,12 +156,15 @@ export class AzureTable<TEntity extends AzureTableEntityBase> {
    * @returns
    */
   groupPartitionKey(entities: TEntity[]) {
-    return entities.reduce((acc, cur) => {
-      if (!acc[cur.partitionKey]) {
-        acc[cur.partitionKey] = [];
-      }
-      acc[cur.partitionKey].push(cur);
-      return acc;
-    }, {} as Record<string, TEntity[]>);
+    return entities.reduce(
+      (acc, cur) => {
+        if (!acc[cur.partitionKey]) {
+          acc[cur.partitionKey] = [];
+        }
+        acc[cur.partitionKey].push(cur);
+        return acc;
+      },
+      {} as Record<string, TEntity[]>,
+    );
   }
 }

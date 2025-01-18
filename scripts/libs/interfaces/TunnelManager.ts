@@ -1,6 +1,5 @@
-
 export interface TunnelManager {
-	start(): Promise<void>;
+  start(): Promise<void>;
 
-	getTunnelUrl(url: string): Promise<string | undefined>;
+  getTunnelUrl(url: string): Promise<string | undefined>;
 }

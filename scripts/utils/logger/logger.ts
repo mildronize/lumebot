@@ -1,5 +1,4 @@
-
-export type LogLevel = "debug" | "info" | "warn" | "error" | "fatal";
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'fatal';
 
 export interface Logger {
   info(...messages: unknown[]): void;
