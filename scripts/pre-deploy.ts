@@ -3,6 +3,7 @@ import 'dotenv/config';
 import { getEnv } from "../src/env";
 import { TelegramBotClient } from './libs/TelegramClient';
 import { config } from './_config';
+import { AzureFunctionsClient } from './libs/AzureFunctionsClient';
 
 export async function preDeploy() {
 	const env = getEnv(process.env);
@@ -13,7 +14,18 @@ export async function preDeploy() {
 	const telegramBotClient = new TelegramBotClient({
 		token: env.BOT_TOKEN,
 	});
-	await telegramBotClient.setWebhook(new URL(config.telegramWebhookPath, env.TELEGRAM_WEBHOOK_URL).toString());
+	const webhookUrl = new URL(config.telegramWebhookPath, env.TELEGRAM_WEBHOOK_URL);
+	const code = await new AzureFunctionsClient({
+		functionName: env.AZURE_FUNCTIONS_NAME,
+		functionAppName: env.AZURE_FUNCTIONS_APP_NAME,
+		resourceGroup: env.AZURE_FUNCTIONS_RESOURCE_GROUP,
+		subscription: env.AZURE_FUNCTIONS_SUBSCRIPTION,
+	}).getFunctionKey();
+	if (!code) {
+		throw new Error('Azure Function key is not set');
+	}
+	webhookUrl.searchParams.set('code', code);
+	await telegramBotClient.setWebhook(webhookUrl.toString());
 }
 
 preDeploy();

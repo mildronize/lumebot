@@ -51,6 +51,22 @@ export const envSchema = z.object({
    * Use for share multiple app in one Azure Storage Account
    */
   AZURE_TABLE_PREFIX: z.string().default('MyBot'),
+	/**
+	 * Azure Functions Name
+	 */
+	AZURE_FUNCTIONS_NAME: z.string(),
+	/**
+	 * Azure Functions App Name
+	 */
+	AZURE_FUNCTIONS_APP_NAME: z.string(),
+	/**
+	 * Azure Functions Resource Group
+	 */
+	AZURE_FUNCTIONS_RESOURCE_GROUP: z.string(),
+	/**
+	 * Azure Functions Subscription
+	 */
+	AZURE_FUNCTIONS_SUBSCRIPTION: z.string(),
 });
 
 export function getEnv(env: unknown) {
