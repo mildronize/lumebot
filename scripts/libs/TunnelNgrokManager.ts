@@ -44,8 +44,11 @@ export class TunnelNgrokManager implements TunnelManager {
 	async start(): Promise<void> {
 		try {
 			console.log('Starting tunnel');
-			fs.mkdirSync(path.dirname(this.options.logPath), { recursive: true });
-			// const ngrokPromise = $`ngrok http ${this.options.forwardPort} --log=stdout > ${this.options.logPath}`;
+			await this.killProcess();
+
+			if (!fs.existsSync(path.dirname(this.options.logPath))) {
+				fs.mkdirSync(path.dirname(this.options.logPath), { recursive: true });
+			}
 			// Show backend status
 			this.waitUntilUrlReady(this.options.healthCheckUrl, 'Backend');
 			// Run preStart function
@@ -69,22 +72,34 @@ export class TunnelNgrokManager implements TunnelManager {
 		this.setupSignalHandlers();
 	}
 
-	private async findNgrokProcessId(): Promise<string | null> {
-		const processName = 'ngrok';
-		const ngrokProcessId = await $`ps aux | grep ${processName} | grep -v grep | awk '{print $2}'`;
-		if (ngrokProcessId) {
-			return ngrokProcessId.stdout.toString().trim();
+	private async findNgrokProcessId(disableFindFromPort = false): Promise<string | undefined> {
+		try {
+			const processName = 'ngrok';
+			const ngrokProcessId = (await $`ps aux | grep ${processName} | grep -v grep | awk '{print $2}'`).stdout.toString().trim();
+			if (ngrokProcessId) {
+				return ngrokProcessId;
+			}
+			if (disableFindFromPort) {
+				return undefined;
+			}
+			// Try to find the process id from port using lsof
+			const ngrokProcessIdFromPort = await $`lsof -t -i :${this.options.ngrokPort}`;
+			if (ngrokProcessIdFromPort) {
+				return ngrokProcessIdFromPort.stdout.toString().trim();
+			}
+			return undefined;
+		} catch (error: unknown) {
+			return undefined;
 		}
-		// Try to find the process id from port using lsof
-		const ngrokProcessIdFromPort = await $`lsof -t -i :${this.options.ngrokPort}`;
-		if (ngrokProcessIdFromPort) {
-			return ngrokProcessIdFromPort.stdout.toString().trim();
-		}
-		return null;
 	}
 
-	async killProcess(pid: string, processName = 'ngrok'): Promise<void> {
-		console.log(`Killing ${processName} process with pid ${pid}`);
+	async killProcess(): Promise<void> {
+		const pid = await this.findNgrokProcessId();
+		if (!pid) {
+			console.log('Ngrok process not found');
+			return;
+		}
+		console.log(`Killing ngrok process with pid ${pid}`);
 		await $`kill -9 ${pid}`;
 	}
 
@@ -94,8 +109,8 @@ export class TunnelNgrokManager implements TunnelManager {
 		signals.forEach((signal) =>
 			process.on(signal, async () => {
 				console.log(`Received ${signal}. Cleaning up...`);
-				const pid = await this.findNgrokProcessId();
-				if (pid) await this.killProcess(pid);
+				await this.killProcess();
+				console.log('Exiting...');
 				process.exit(0);
 			})
 		);
@@ -109,7 +124,6 @@ export class TunnelNgrokManager implements TunnelManager {
 		const tunnelResourceInfoUrl = `http://localhost:${this.options.ngrokPort}/api/tunnels`;
 		await this.waitUntilUrlReady(tunnelResourceInfoUrl, 'Ngrok Tunnel');
 		const tunnelUrl = await this.getTunnelUrl(tunnelResourceInfoUrl);
-		console.log('Tunnel URL:', tunnelUrl);
 		if (!tunnelUrl) {
 			throw new Error('Failed to get Ngrok tunnel Public URL');
 		}
@@ -118,10 +132,10 @@ export class TunnelNgrokManager implements TunnelManager {
 	}
 
 	async getTunnelUrl(url: string): Promise<string | undefined> {
+		const tunnelResponse = await fetch(url);
 		// Somehow fetch api convert xml to json automatically
-		const tunnelResponse = await (await fetch(url)).text();
-		// const tunnelJson = new XMLParser().parse(tunnelResponse);
-		const tunnelResourceInfo = this.getTunnelResourceInfo(JSON.parse(tunnelResponse));
+		const tunnelJson = await tunnelResponse.text()
+		const tunnelResourceInfo = this.getTunnelResourceInfo(JSON.parse(tunnelJson));
 		if (tunnelResourceInfo.tunnels.length > 0) {
 			return tunnelResourceInfo.tunnels[0].public_url;
 		}
