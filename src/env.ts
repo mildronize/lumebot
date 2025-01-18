@@ -2,6 +2,7 @@ import { z, ZodError } from "zod";
 import { fromZodError } from 'zod-validation-error';
 
 export const envSchema = z.object({
+	NODE_ENV: z.string().default('production'),
 	BOT_TOKEN: z.string(),
 	BOT_INFO: z.string(),
 	/**
@@ -30,14 +31,14 @@ export const envSchema = z.object({
 	 * @default true
 	 */
 	PROTECTED_BOT: z.boolean().default(true),
-	/**
-	 * Webhook Secret
-	 *
-	 * Use to verify the request is coming from Telegram
-	 *
-	 * When not set, it will automatically generate a secret
-	 */
-	WEBHOOK_SECRET: z.string().optional(),
+	// /**
+	//  * Webhook Secret
+	//  *
+	//  * Use to verify the request is coming from Telegram
+	//  *
+	//  * When not set, it will automatically generate a secret
+	//  */
+	// WEBHOOK_SECRET: z.string().optional(),
 	/**
 	 * OpenAI API Key
 	 */

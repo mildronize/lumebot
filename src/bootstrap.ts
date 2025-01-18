@@ -5,10 +5,15 @@ import { OpenAIClient } from "./bot/ai/openai";
 import { AzureTable } from "./libs/azure-table";
 import { IMessageEntity } from "./entities/messages";
 import { TableClient } from "@azure/data-tables";
+import { Bot } from 'grammy';
+import { generateUpdateMiddleware } from 'telegraf-middleware-console-time';
 
 const env = getEnv(process.env);
 
-export function bootstrap() {
+export function bootstrap(): {
+	bot: Bot,
+	asyncTask: () => Promise<void>
+} {
 	const aiClient = new OpenAIClient(env.OPENAI_API_KEY);
 	const azureTableClient = {
 		messages: new AzureTable<IMessageEntity>(
@@ -22,6 +27,9 @@ export function bootstrap() {
 		aiClient,
 		azureTableClient
 	});
+	if(env.NODE_ENV === 'development') {
+		botApp.instance.use(generateUpdateMiddleware());
+	}
 	botApp.init();
 	return {
 		bot: botApp.instance,
