@@ -15,7 +15,7 @@ import { Logger } from "./logger";
  * @param level - Log level for stdout
  * @returns
  */
-export const pinoLogBuilder = (name: string, level: pino.LevelWithSilentOrString) => {
+export const createPinoLogger = (name: string, level: pino.LevelWithSilentOrString) => {
   return new PinoLogger(pino({
     name,
     // Set the global log level to the lowest level

@@ -3,6 +3,7 @@ import 'dotenv/config';
 import { getEnv } from "../src/env";
 import { config } from './_config';
 import { TunnelNgrokManager } from './libs/TunnelNgrokManager';
+import { createPinoLogger } from './utils/logger';
 
 /**
  * After running bot using `start`, it will remove the webhook and start polling.
@@ -29,8 +30,9 @@ export async function preDeploy() {
 	await fetch(targetUrl);
 }
 
-function startTunnel(){
+function startTunnel() {
 	const tunnelManager = new TunnelNgrokManager({
+		logger: createPinoLogger('tunnel', config.logLevel),
 		preStart: (tunnelUrl) => {
 			console.log('Setting webhook to', tunnelUrl);
 		}

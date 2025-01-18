@@ -5,7 +5,6 @@ import path from "path";
 import { z, ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { Logger } from '../utils/logger/logger';
-import { Console } from "console";
 import { ConsoleLogger } from '../utils/logger/console-logger';
 
 export interface TunnelNgrokManagerOptions {
@@ -45,12 +44,12 @@ export class TunnelNgrokManager implements TunnelManager {
 	constructor(options?: Partial<TunnelNgrokManagerOptions>) {
 		this.options = Object.assign({}, TunnelNgrokManager.defaultOptions, options);
 		this.logger = this.options.logger;
-		// console.log('TunnelNgrokManager created with options:', this.options);
+		this.logger.debug(`TunnelNgrokManager created with options: ${JSON.stringify(this.options)}`);
 	}
 
 	async start(): Promise<void> {
 		try {
-			console.log('Starting tunnel');
+			this.logger.info('Starting tunnel');
 			await this.killProcess();
 
 			if (!fs.existsSync(path.dirname(this.options.logPath))) {
@@ -73,7 +72,7 @@ export class TunnelNgrokManager implements TunnelManager {
 	setupNgrokSignalHandlers() {
 		const isWindows = process.platform === "win32";
 		if (isWindows) {
-			console.error("This script is not supported on Windows.");
+			this.logger.error("This script is not supported on Windows.");
 			return;
 		}
 		this.setupSignalHandlers();
@@ -103,10 +102,10 @@ export class TunnelNgrokManager implements TunnelManager {
 	async killProcess(): Promise<void> {
 		const pid = await this.findNgrokProcessId();
 		if (!pid) {
-			console.log('Ngrok process not found');
+			this.logger.debug('Ngrok process not found');
 			return;
 		}
-		console.log(`Killing ngrok process with pid ${pid}`);
+		this.logger.debug(`Killing ngrok process with pid ${pid}`);
 		await $`kill -9 ${pid}`;
 	}
 
@@ -115,9 +114,9 @@ export class TunnelNgrokManager implements TunnelManager {
 		const signals = ["SIGTERM", "SIGINT", "SIGHUP"];
 		signals.forEach((signal) =>
 			process.on(signal, async () => {
-				console.log(`Received ${signal}. Cleaning up...`);
+				this.logger.info(`Received ${signal}. Cleaning up...`);
 				await this.killProcess();
-				console.log('Exiting...');
+				this.logger.info('Exiting...');
 				process.exit(0);
 			})
 		);
@@ -159,7 +158,7 @@ export class TunnelNgrokManager implements TunnelManager {
 				return response.status === 200;
 			} catch (error) {
 				// Assuming non-200 or fetch errors mean the tunnel is not ready yet.
-				console.log(`"${serviceName}" is not ready yet`);
+				this.logger.info(`"${serviceName}" is not ready yet`);
 				return false;
 			}
 		};
@@ -167,7 +166,7 @@ export class TunnelNgrokManager implements TunnelManager {
 		while (!(await isBackendReady())) {
 			await new Promise(resolve => setTimeout(resolve, this.options.healthCheckInterval));
 		}
-		console.log(`"${serviceName}" is ready`);
+		this.logger.info(`"${serviceName}" is ready`);
 	}
 
 	getTunnelResourceInfo(tunnelResourceInfo: unknown): z.infer<typeof TunnelNgrokManager.resourceInfoSchema> {
@@ -175,9 +174,9 @@ export class TunnelNgrokManager implements TunnelManager {
 			return TunnelNgrokManager.resourceInfoSchema.parse(tunnelResourceInfo);
 		} catch (error: unknown) {
 			if (error instanceof ZodError) {
-				console.error(fromZodError(error).message);
+				this.logger.error(fromZodError(error).message);
 			} else {
-				console.error('Unknown error', error);
+				this.logger.error('Unknown error', error);
 			}
 			throw new Error('Invalid Ngrok Tunnel Resource Info schema, ngrok may have changed its API');
 		}
