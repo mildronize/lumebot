@@ -2,10 +2,10 @@ import { $ } from "bun";
 import { TunnelManager } from "./interfaces/TunnelManager";
 import fs from 'fs';
 import path from "path";
-import { z, ZodError } from "zod";
-import { fromZodError } from "zod-validation-error";
+import { z } from "zod";
 import { Logger } from '../utils/logger/logger';
 import { ConsoleLogger } from '../utils/logger/console-logger';
+import { getErrorMessage } from "../utils/error";
 
 export interface TunnelNgrokManagerOptions {
 	ngrokPort: number;
@@ -60,9 +60,9 @@ export class TunnelNgrokManager implements TunnelManager {
 			// Run preStart function
 			this.preStart();
 			// Setup signal handlers
-			this.setupNgrokSignalHandlers(),
-				// Start ngrok tunnel
-				await $`ngrok http ${this.options.forwardPort} --log=stdout > ${this.options.logPath}`
+			this.setupNgrokSignalHandlers();
+			// Start ngrok tunnel
+			await $`ngrok http ${this.options.forwardPort} --log=stdout > ${this.options.logPath}`
 		}
 		catch (error) {
 			throw new Error(`Error starting ngrok tunnel: ${error}`);
@@ -173,11 +173,7 @@ export class TunnelNgrokManager implements TunnelManager {
 		try {
 			return TunnelNgrokManager.resourceInfoSchema.parse(tunnelResourceInfo);
 		} catch (error: unknown) {
-			if (error instanceof ZodError) {
-				this.logger.error(fromZodError(error).message);
-			} else {
-				this.logger.error('Unknown error', error);
-			}
+			this.logger.error(getErrorMessage(error));
 			throw new Error('Invalid Ngrok Tunnel Resource Info schema, ngrok may have changed its API');
 		}
 	}
