@@ -130,7 +130,7 @@ export class BotApp {
 
   private maskBotToken(text: string, action: 'mask' | 'unmask') {
     if (action === 'mask') return text.replace(new RegExp(this.options.botToken, 'g'), '${{BOT_TOKEN}}');
-    return text.replace(new RegExp('${{BOT_TOKEN}}', 'g'), this.options.botToken);
+    return text.replaceAll('${{BOT_TOKEN}}', this.options.botToken);
   }
 
   private async handlePhoto(
