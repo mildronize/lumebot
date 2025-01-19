@@ -5,8 +5,13 @@ import { SystemRole, CharacterRole, sentenceEnd } from './characters';
 import { multiAgentResponseSchema } from './multi-agent';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
 import { z } from 'zod';
 dayjs.extend(utc);
+dayjs.extend(timezone);
+
+const tz = "Asia/Bangkok";
+dayjs.tz.setDefault(tz);
 
 export interface PreviousMessage {
 	type: 'text' | 'photo';
@@ -67,10 +72,10 @@ export class OpenAIClient {
 		// response += `dateTimeUtc: ${parsedMessage?.dateTimeUtc}\n`;
 
 		console.log(JSON.stringify(parsedMessage, null, 2));
-		if(parsedMessage?.agentType === 'Note') {
-			response =  `บันทึกโน้ต: ${parsedMessage?.memo ?? parsedMessage.message + "(M)"}`;
-		} else if(parsedMessage?.agentType === 'Expense Tracker') {
-			response = `บันทึกค่าใช้จ่าย: Note ${parsedMessage.memo}, ${parsedMessage?.amount} บาท ประเภท: ${parsedMessage?.category} วันที่: ${dayjs(parsedMessage?.dateTimeUtc).utc().format('MMMM DD, YYYY HH:mm')}`;
+		if (parsedMessage?.agentType === 'Note') {
+			response = `บันทึกโน้ต: ${parsedMessage?.memo ?? parsedMessage.message + "(M)"}`;
+		} else if (parsedMessage?.agentType === 'Expense Tracker') {
+			response = `บันทึกค่าใช้จ่าย: Note ${parsedMessage.memo}, ${parsedMessage?.amount} บาท ประเภท: ${parsedMessage?.category} วันที่: ${dayjs(parsedMessage?.dateTimeUtc).format('MMMM DD, YYYY HH:mm')}`;
 		} else {
 			response = parsedMessage?.message ?? '';
 		}
@@ -95,7 +100,7 @@ export class OpenAIClient {
 			messages: [
 				...SystemRole[character],
 				...CharacterRole[this.characterRole],
-				...this.generateSystemMessages([`Current Date (UTC): ${new Date().toUTCString()}`]),
+				...this.generateSystemMessages([`Current Date (UTC): ${dayjs().toISOString()}`]),
 				// ...(chatMode === 'natural' ? this.generateSystemMessages([this.dynamicLimitAnswerSentences(3, 5)]) : []),
 				...this.generatePreviousMessages(previousMessages),
 				...this.generateTextMessages(messages),
@@ -107,9 +112,9 @@ export class OpenAIClient {
 		const parsedMessage = chatCompletion.choices[0].message.parsed;
 		const response = this.parseMessage(parsedMessage);
 		// const response = `${parsedMessage?.agentType}: ${parsedMessage?.message}`;
-		// if (this.splitSentence) {
-		// 	return response.split(sentenceEnd).map((sentence) => sentence.trim());
-		// }
+		if (this.splitSentence && parsedMessage?.agentType === 'Friend') {
+			return response.split(sentenceEnd).map((sentence) => sentence.trim());
+		}
 		return [response];
 	}
 
