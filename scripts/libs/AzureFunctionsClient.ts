@@ -10,7 +10,6 @@ export interface AzureFunctionsClientOptions {
 
 export class AzureFunctionsClient {
   constructor(private readonly options: AzureFunctionsClientOptions) {}
-  // https://thadaw-my-bot.azurewebsites.net/api/telegramBot?code=
   async getFunctionKey(keyName = 'default'): Promise<string | undefined> {
     try {
       const functionKeys = (
