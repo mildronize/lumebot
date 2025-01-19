@@ -257,7 +257,8 @@ export class BotApp {
         if (countMaxPreviousMessage <= 0) {
           break;
         }
-        previousMessage.push({ type: entity.type, content: entity.payload });
+				const content = entity.type === 'photo' ? this.maskBotToken(entity.payload, 'unmask') : entity.payload;
+        previousMessage.push({ type: entity.type, content });
         countMaxPreviousMessage--;
       }
     } else {
