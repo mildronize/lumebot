@@ -13,7 +13,7 @@ export const SystemRole: Record<SystemRoleKey, ChatCompletionMessageParam[]> = {
 	multiAgent: [
 		{
 			role: 'system',
-			content: 'You need to classify the agent, 1) Friend  2) Expense Tracker 3) Note Taker. If you match the agent type, you need add [Friend], [Expense Tracker], [Note Taker] at the beginning of the message',
+			content: 'You need to classify the agent, 1) Friend  2) Expense Tracker 3) Note Taker',
 		}
 	],
 };
