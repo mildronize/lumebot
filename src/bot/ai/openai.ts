@@ -5,6 +5,7 @@ import { SystemRole, CharacterRole, sentenceEnd } from './characters';
 import { multiAgentResponseSchema } from './multi-agent';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
+import { z } from 'zod';
 dayjs.extend(utc);
 
 export interface PreviousMessage {
@@ -57,6 +58,25 @@ export class OpenAIClient {
 		return answerMode.replace('XXX', randomLimit.toString());
 	}
 
+	private parseMessage(parsedMessage: z.infer<typeof multiAgentResponseSchema> | null) {
+		let response = '';
+		// response += `type: ${parsedMessage?.agentType}\n`;
+		// response += `message: ${parsedMessage?.message}\n`;
+		// response += `amount: ${parsedMessage?.amount}\n`;
+		// response += `category: ${parsedMessage?.category}\n`;
+		// response += `dateTimeUtc: ${parsedMessage?.dateTimeUtc}\n`;
+
+		console.log(JSON.stringify(parsedMessage, null, 2));
+		if(parsedMessage?.agentType === 'Note') {
+			response =  `บันทึกโน้ต: ${parsedMessage?.memo ?? parsedMessage.message + "(M)"}`;
+		} else if(parsedMessage?.agentType === 'Expense Tracker') {
+			response = `บันทึกค่าใช้จ่าย: Note ${parsedMessage.memo}, ${parsedMessage?.amount} บาท ประเภท: ${parsedMessage?.category} วันที่: ${dayjs(parsedMessage?.dateTimeUtc).utc().format('MMMM DD, YYYY HH:mm')}`;
+		} else {
+			response = parsedMessage?.message ?? '';
+		}
+		return response;
+	}
+
 	/**
 	 * Chat with the AI, the AI API is stateless we need to keep track of the conversation
 	 *
@@ -85,22 +105,7 @@ export class OpenAIClient {
 		});
 		// const response = chatCompletion.choices[0].message.content ?? '';
 		const parsedMessage = chatCompletion.choices[0].message.parsed;
-		let response = '';
-		// response += `type: ${parsedMessage?.agentType}\n`;
-		// response += `message: ${parsedMessage?.message}\n`;
-		// response += `amount: ${parsedMessage?.amount}\n`;
-		// response += `category: ${parsedMessage?.category}\n`;
-		// response += `dateTimeUtc: ${parsedMessage?.dateTimeUtc}\n`;
-
-		console.log(JSON.stringify(parsedMessage, null, 2));
-		if(parsedMessage?.agentType === 'Note') {
-			response =  `บันทึกโน้ต: ${parsedMessage?.memo ?? parsedMessage.message + "(M)"}`;
-		} else if(parsedMessage?.agentType === 'Expense Tracker') {
-			response = `บันทึกค่าใช้จ่าย: Note ${parsedMessage.memo}, ${parsedMessage?.amount} บาท ประเภท: ${parsedMessage?.category} วันที่: ${dayjs(parsedMessage?.dateTimeUtc).utc().format('MMMM DD, YYYY HH:mm')}`;
-		} else {
-			response = parsedMessage?.message ?? '';
-		}
-
+		const response = this.parseMessage(parsedMessage);
 		// const response = `${parsedMessage?.agentType}: ${parsedMessage?.message}`;
 		// if (this.splitSentence) {
 		// 	return response.split(sentenceEnd).map((sentence) => sentence.trim());
@@ -139,7 +144,7 @@ export class OpenAIClient {
 	}
 
 	async chatWithImage(character: keyof typeof SystemRole, messages: string[], imageUrl: string, previousMessages: PreviousMessage[] = []) {
-		const chatCompletion = await this.client.chat.completions.create({
+		const chatCompletion = await this.client.beta.chat.completions.parse({
 			messages: [
 				...SystemRole[character],
 				...this.generateTextMessages(messages),
@@ -147,7 +152,11 @@ export class OpenAIClient {
 				this.generateImageMessage(imageUrl),
 			],
 			model: 'gpt-4o',
+			response_format: zodResponseFormat(multiAgentResponseSchema, "agentType"),
 		});
-		return chatCompletion.choices[0].message.content;
+		// return chatCompletion.choices[0].message.content;
+		const parsedMessage = chatCompletion.choices[0].message.parsed;
+		const response = this.parseMessage(parsedMessage);
+		return response;
 	}
 }
