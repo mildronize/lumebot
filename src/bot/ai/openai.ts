@@ -3,6 +3,9 @@ import type { ChatCompletionMessageParam } from 'openai/resources';
 import { zodResponseFormat } from "openai/helpers/zod";
 import { SystemRole, CharacterRole, sentenceEnd } from './characters';
 import { multiAgentResponseSchema } from './multi-agent';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+dayjs.extend(utc);
 
 export interface PreviousMessage {
 	type: 'text' | 'photo';
@@ -72,6 +75,7 @@ export class OpenAIClient {
 			messages: [
 				...SystemRole[character],
 				...CharacterRole[this.characterRole],
+				...this.generateSystemMessages([`Current Date (UTC): ${new Date().toUTCString()}`]),
 				// ...(chatMode === 'natural' ? this.generateSystemMessages([this.dynamicLimitAnswerSentences(3, 5)]) : []),
 				...this.generatePreviousMessages(previousMessages),
 				...this.generateTextMessages(messages),
@@ -81,10 +85,26 @@ export class OpenAIClient {
 		});
 		// const response = chatCompletion.choices[0].message.content ?? '';
 		const parsedMessage = chatCompletion.choices[0].message.parsed;
-		const response = `${parsedMessage?.agentType}: ${parsedMessage?.message}`;
-		if (this.splitSentence) {
-			return response.split(sentenceEnd).map((sentence) => sentence.trim());
+		let response = '';
+		// response += `type: ${parsedMessage?.agentType}\n`;
+		// response += `message: ${parsedMessage?.message}\n`;
+		// response += `amount: ${parsedMessage?.amount}\n`;
+		// response += `category: ${parsedMessage?.category}\n`;
+		// response += `dateTimeUtc: ${parsedMessage?.dateTimeUtc}\n`;
+
+		console.log(JSON.stringify(parsedMessage, null, 2));
+		if(parsedMessage?.agentType === 'Note') {
+			response =  `บันทึกโน้ต: ${parsedMessage?.memo ?? parsedMessage.message + "(M)"}`;
+		} else if(parsedMessage?.agentType === 'Expense Tracker') {
+			response = `บันทึกค่าใช้จ่าย: Note ${parsedMessage.memo}, ${parsedMessage?.amount} บาท ประเภท: ${parsedMessage?.category} วันที่: ${dayjs(parsedMessage?.dateTimeUtc).utc().format('MMMM DD, YYYY HH:mm')}`;
+		} else {
+			response = parsedMessage?.message ?? '';
 		}
+
+		// const response = `${parsedMessage?.agentType}: ${parsedMessage?.message}`;
+		// if (this.splitSentence) {
+		// 	return response.split(sentenceEnd).map((sentence) => sentence.trim());
+		// }
 		return [response];
 	}
 
