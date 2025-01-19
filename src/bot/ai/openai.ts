@@ -122,7 +122,7 @@ export class OpenAIClient {
         ...this.generatePreviousMessages(previousMessages),
         this.generateImageMessage(imageUrl),
       ],
-      model: this.model,
+      model: 'gpt-4o',
     });
     return chatCompletion.choices[0].message.content;
   }

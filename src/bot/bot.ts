@@ -159,7 +159,7 @@ export class BotApp {
         type: 'photo',
       }).init(),
     );
-    const message = await aiClient.chatWithImage('friend', incomingMessages, photo.photoUrl);
+    const message = await aiClient.chatWithImage('multiAgent', incomingMessages, photo.photoUrl);
     if (!message) {
       await ctx.reply(t.sorryICannotUnderstand);
       return;
@@ -265,7 +265,7 @@ export class BotApp {
     }
     previousMessage.reverse();
     // Step 3: Chat with AI
-    const messages = await aiClient.chat('friend', chatMode, [incomingMessage], previousMessage);
+    const messages = await aiClient.chat('multiAgent', chatMode, [incomingMessage], previousMessage);
     await azureTableMessageClient.insert(
       await new MessageEntity({
         payload: messages.join(' '),
