@@ -16,8 +16,7 @@ export const SystemRole: Record<SystemRoleKey, ChatCompletionMessageParam[]> = {
 			content: `
 			You need to classify the agent:
 				1) Expense Tracker, when related with expense, income, bill, receipt. Extract memo, amount and category, get dateTimeUtc based on the conversation relative to the current date
-				2) Note, when related with note, reminder, to-do list. Extract memo, dateTimeUtc
-				3) Friend, when other conversation, response with AI generated message
+				2) Friend, when other conversation, response with AI generated message
 			`,
 		}
 	],
