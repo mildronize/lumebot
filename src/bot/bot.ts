@@ -88,12 +88,12 @@ export class BotApp {
 
   init() {
     console.log('BotApp init');
+		this.bot.command('whoiam', async (ctx: Context) => {
+      await ctx.reply(`${t.yourAre} ${ctx.from?.first_name} (id: ${ctx.message?.from?.id})`);
+    });
     if (this.protectedBot === true) {
       this.bot.use(authorize(this.options.allowUserIds ?? []));
     }
-    this.bot.command('whoiam', async (ctx: Context) => {
-      await ctx.reply(`${t.yourAre} ${ctx.from?.first_name} (id: ${ctx.message?.from?.id})`);
-    });
     this.bot.command('ai', async (ctx) => {
       // With the `ai` command, the user can chat with the AI using Full Response Mode
       const incomingMessage = ctx.match;
