@@ -10,6 +10,7 @@ export const multiAgentResponseSchema = z.object({
 	memo: z.string().optional(),
 	// For Note
 	// Also use note
+	contextChangedPossibility: z.number(),
 });
 
 // export const multiAgentResponseSchema = z.union([

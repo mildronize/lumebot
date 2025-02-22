@@ -6,7 +6,7 @@ export const seperateSentence = `, Always use ${sentenceEnd} at the end of sente
 
 export const language = 'Thai';
 
-export type SystemRoleKey = 'friend' | 'multiAgent';
+export type SystemRoleKey = 'friend' | 'multiAgent' | 'bypassAgent';
 
 export const SystemRole: Record<SystemRoleKey, ChatCompletionMessageParam[]> = {
 	friend: [{ role: 'system', content: 'You are friendly nice friend' }],
@@ -19,8 +19,26 @@ export const SystemRole: Record<SystemRoleKey, ChatCompletionMessageParam[]> = {
 				2) Note, when related with note, reminder, to-do list. Extract memo, dateTimeUtc
 				3) Friend, when other conversation, response with AI generated message
 			`,
+		},
+		{
+			role: 'system',
+			content: `Understand the context of the conversation, extract possible context change possibility when compared with the previous conversation`,
+		},
+		{
+			role: 'system',
+			content: `Always use ${sentenceEnd} at the end of sentence`,
 		}
 	],
+	bypassAgent: [
+		{
+			role: 'system',
+			content: `
+			Extract type of conversation, if not match with the agent, bypass the agent to regular conversation or AI generated message.
+				1) Expense Tracker, when related with expense, income, bill, receipt
+				2) Note, when related with note, reminder, to-do list.
+			`,
+		}
+	]
 };
 
 export type CharacterRoleKey = 'Riko';

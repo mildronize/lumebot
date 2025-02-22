@@ -28,7 +28,7 @@ export type ChatMode = 'natural' | 'default';
 export class OpenAIClient {
 	characterRole: keyof typeof CharacterRole;
 	client: OpenAI;
-	model: string = 'gpt-4o-mini';
+	model: string = 'gpt-4o';
 	timeout: number = 20 * 1000; // 20 seconds, default is 10 minutes (By OpenAI)
 	/**
 	 * The limit of previous messages to chat with the AI, this prevent large tokens be sent to the AI
