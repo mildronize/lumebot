@@ -24,6 +24,7 @@ export function bootstrap(): {
     botToken: env.BOT_TOKEN,
     botInfo: JSON.parse(env.BOT_INFO),
     allowUserIds: env.ALLOWED_USER_IDS,
+		protectedBot: env.PROTECTED_BOT,
     aiClient,
     azureTableClient,
   });
