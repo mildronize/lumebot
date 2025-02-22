@@ -37,6 +37,15 @@ export const envSchema = z.object({
    * Use for share multiple app in one Azure Storage Account
    */
   AZURE_TABLE_PREFIX: z.string().default('MyBot'),
+
+	/**
+	 * Notion Key
+	 */
+	NOTION_KEY: z.string().optional(),
+	/**
+	 * Notion Database ID
+	 */
+	NOTION_DATABASE_ID: z.string().optional(),
 });
 
 /**
